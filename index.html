@@ -1,863 +1,2181 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <title>Glowing Ball</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(180deg, #1a2980 0%, #26d0ce 100%);
-            height: 100vh;
-            touch-action: none;
-            user-select: none;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DINO Game v2 — Бизнес, Крипта, ДиноНет</title>
 
-        canvas {
-            display: block;
-            background: linear-gradient(180deg, #1a2980 0%, #26d0ce 100%);
-            touch-action: none;
-        }
+  <!-- Icons & Tailwind -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-        .ui {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: white;
-            font-size: 16px;
-            z-index: 100;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            background: rgba(0,0,0,0.3);
-            padding: 10px;
-            border-radius: 10px;
-            backdrop-filter: blur(5px);
-        }
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            // Dark theme colors
+            darkBg: "#0f1117",
+            darkBgLight: "#1a1d26",
+            darkCard: "#1d212c",
+            darkCardHover: "#232734",
+            darkPrimary: "#10b981",
+            darkPrimaryHover: "#059669",
+            darkSecondary: "#facc15",
+            darkDanger: "#ef4444",
+            darkMuted: "#94a3b8",
+            darkBorder: "#2d323d",
 
-        .bitcoin-icon {
-            color: #f7931a;
-            font-weight: bold;
+            // Light theme colors optimized
+            lightBg: "#f0f4f8",
+            lightBgLight: "#ffffff",
+            lightCard: "#ffffff",
+            lightCardHover: "#e5e7eb",
+            lightPrimary: "#047857",
+            lightPrimaryHover: "#03543f",
+            lightSecondary: "#d97706",
+            lightDanger: "#b91c1c",
+            lightMuted: "#4b5563",
+            lightBorder: "#d1d5db"
+          },
+          boxShadow: {
+            dino: "0 10px 30px rgba(16,185,129,.15)",
+            card: "0 8px 25px rgba(0,0,0,.3)",
+            glow: "0 0 15px rgba(16,185,129,.3)"
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'float': 'float 6s ease-in-out infinite',
+            'bounce-subtle': 'bounce 1s infinite',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-10px)' },
+            }
+          }
         }
+      }
+    }
+  </script>
 
-        .stars {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            pointer-events: none;
-        }
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-        .star {
-            position: absolute;
-            background: white;
-            border-radius: 50%;
-            animation: twinkle 3s infinite ease-in-out;
-        }
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.3; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.2); }
-        }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      user-select: none;
+    }
 
-        .multiplier-popup {
-            position: absolute;
-            color: #ffdd44;
-            font-size: 24px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            pointer-events: none;
-            z-index: 200;
-            animation: multiplierPop 1s ease-out forwards;
-        }
+    body.dark {
+      background-color: #0f1117;
+      color: #f8fafc;
+    }
 
-        @keyframes multiplierPop {
-            0% { transform: scale(0.5) translateY(0); opacity: 1; }
-            50% { transform: scale(1.2) translateY(-20px); opacity: 1; }
-            100% { transform: scale(1) translateY(-40px); opacity: 0; }
-        }
+    body.light {
+      background-color: #f0f4f8;
+      color: #1f2937;
+    }
 
-        #gameOver {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            text-align: center;
-            font-size: 24px;
-            z-index: 300;
-            background: rgba(0,0,0,0.7);
-            padding: 20px;
-            border-radius: 10px;
-            display: none;
-        }
+    .gradient-bg {
+      background: linear-gradient(135deg, #0f1117 0%, #1a1d26 100%);
+    }
 
-        #restartButton {
-            margin-top: 20px;
-            padding: 10px 20px;
-            background: #f7931a;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 18px;
-        }
+    .dino-gradient-text {
+      background: linear-gradient(90deg, #10b981, #facc15);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
 
-        #autoButton {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 60px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0);
-            border-radius: 50%;
-            z-index: 100;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: rgba(255, 255, 255, 0);
-            font-size: 12px;
-            text-shadow: none;
-            opacity: 0;
-        }
-    </style>
+    .nav-btn.active {
+      color: #facc15;
+      position: relative;
+    }
+
+    .nav-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 24px;
+      height: 3px;
+      background: #facc15;
+      border-radius: 3px;
+    }
+
+    .tab-btn.active {
+      background: #10b981;
+      color: #fff;
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .card {
+      border-radius: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .dark .card {
+      background: #1d212c;
+      border: 1px solid #2d323d;
+    }
+
+    .light .card {
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+    }
+
+    .dark .card:hover {
+      box-shadow: 0 8px 25px rgba(0,0,0,.2);
+      border-color: rgba(16,185,129,.2);
+    }
+
+    .light .card:hover {
+      box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+      border-color: rgba(16,185,129,.2);
+    }
+
+    .pill {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .dark .pill {
+      background: rgba(16,185,129,.15);
+      color: #10b981;
+    }
+
+    .light .pill {
+      background: rgba(16,185,129,.1);
+      color: #047857;
+    }
+
+    .fade-in {
+      animation: fadein 0.25s ease-out;
+    }
+
+    .slide-in {
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .coin-pop {
+      animation: coinPop 0.6s ease-out forwards;
+    }
+
+    .progress-bar {
+      overflow: hidden;
+      border-radius: 10px;
+    }
+
+    .dark .progress-bar {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .light .progress-bar {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #34d399);
+      border-radius: 10px;
+      transition: width 0.5s ease;
+    }
+
+    @keyframes fadein {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes coinPop {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      50% { opacity: 0.8; transform: translateY(-30px) scale(1.1); }
+      100% { opacity: 0; transform: translateY(-60px) scale(1); }
+    }
+
+    /* Desktop specific styles */
+    @media (min-width: 768px) {
+      .desktop-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .desktop-sidebar {
+        width: 260px;
+        flex-shrink: 0;
+      }
+
+      .desktop-content {
+        flex-grow: 1;
+        margin-left: 20px;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+      }
+    }
+
+    /* Mobile specific styles */
+    @media (max-width: 767px) {
+      .mobile-tab-content {
+        padding-bottom: 80px;
+      }
+
+      .mobile-bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 50;
+        backdrop-filter: blur(10px);
+      }
+
+      .dark .mobile-bottom-nav {
+        background: rgba(29, 33, 44, 0.9);
+        border-top: 1px solid #2d323d;
+      }
+
+      .light .mobile-bottom-nav {
+        background: rgba(255, 255, 255, 0.9);
+        border-top: 1px solid #d1d5db;
+      }
+
+      textarea {
+        max-height: 100px;
+        overflow-y: auto;
+        word-break: break-word;
+      }
+
+      .post-text {
+        overflow: hidden;
+        max-height: 100px;
+        text-overflow: ellipsis;
+      }
+
+      .post-expanded .post-text {
+        max-height: none;
+      }
+    }
+  </style>
 </head>
-<body>
-    <div class="stars" id="stars"></div>
 
-    <div class="ui">
-        <div>Altitude: <span id="altitude">0</span>m</div>
-        <div>Bitcoins: <span class="bitcoin-icon">₿</span><span id="bitcoins">0.00</span></div>
-        <div>Multiplier: x<span id="multiplier">1.0</span></div>
-    </div>
+<body class="gradient-bg min-h-screen dark"> <!-- Default dark theme -->
+  <!-- Desktop Layout -->
+  <div class="hidden md:flex desktop-container min-h-screen">
+    <!-- Sidebar -->
+    <aside class="desktop-sidebar glass rounded-2xl p-6 h-fit sticky top-6">
+      <div class="flex items-center mb-8">
+        <div class="w-14 h-14 rounded-full bg-darkCard flex items-center justify-center mr-3 border border-darkBorder">
+          <i class="fa-solid fa-dragon text-darkPrimary text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold">DINO Game</h1>
+          <p class="text-darkMuted text-sm">v2.0</p>
+        </div>
+      </div>
 
-    <div id="gameOver">
-        <div>Game Over!</div>
-        <div>You lost the won bitcoins and your bet burned.</div>
-        <div>Altitude: <span id="finalAltitude">0</span>m</div>
-        <div>Bitcoins: <span id="finalBitcoins">0.00</span></div>
-        <button id="restartButton">Play Again</button>
-    </div>
+      <div class="mb-6 p-4 rounded-xl bg-darkCard">
+        <div class="text-center mb-2">
+          <div class="text-2xl font-bold"><span id="desktop-balance">0</span> DINO</div>
+        </div>
+        <div class="text-center mb-2">
+          <div class="text-lg font-bold text-darkSecondary"><span id="desktop-stars">0</span> ⭐</div>
+        </div>
+        <div class="text-center">
+          <div class="text-lg font-bold text-darkPrimary"><span id="desktop-ton">0</span> TON</div>
+        </div>
+        <div class="text-center mt-2">
+          <div class="text-lg font-bold text-darkPrimary"><span id="desktop-dps">0</span> DINO / сек</div>
+        </div>
+      </div>
 
-    <div id="autoButton">Auto</div>
+      <nav class="space-y-2">
+        <button class="desktop-nav-btn w-full text-left py-3 px-4 rounded-xl flex items-center transition-all" data-tab="clicker">
+          <i class="fa-regular fa-hand-pointer text-lg w-6 mr-3"></i>
+          <span>Кликер</span>
+        </button>
+        <button class="desktop-nav-btn w-full text-left py-3 px-4 rounded-xl flex items-center transition-all" data-tab="dinonet">
+          <i class="fa-solid fa-globe text-lg w-6 mr-3"></i>
+          <span>ДиноНет</span>
+        </button>
+        <button class="desktop-nav-btn w-full text-left py-3 px-4 rounded-xl flex items-center transition-all" data-tab="business">
+          <i class="fa-solid fa-building text-lg w-6 mr-3"></i>
+          <span>Бизнес</span>
+        </button>
+        <button class="desktop-nav-btn w-full text-left py-3 px-4 rounded-xl flex items-center transition-all" data-tab="investments">
+          <i class="fa-solid fa-chart-line text-lg w-6 mr-3"></i>
+          <span>Инвестиции</span>
+        </button>
+        <button class="desktop-nav-btn w-full text-left py-3 px-4 rounded-xl flex items-center transition-all" data-tab="profile">
+          <i class="fa-regular fa-user text-lg w-6 mr-3"></i>
+          <span>Профиль</span>
+        </button>
+      </nav>
 
-    <canvas id="gameCanvas"></canvas>
+      <div class="mt-8 p-4 rounded-xl bg-darkCard">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-darkMuted">Уровень</span>
+          <span class="font-bold" id="desktop-level">1</span>
+        </div>
+        <div class="progress-bar h-2 w-full mb-1">
+          <div class="progress-fill" id="desktop-xp-bar" style="width: 0%"></div>
+        </div>
+        <div class="text-xs text-darkMuted text-right" id="desktop-xp-text">0/150 XP</div>
+      </div>
+    </aside>
 
-    <script>
-        if (window.Telegram && window.Telegram.WebApp) {
-            Telegram.WebApp.ready();
-            Telegram.WebApp.expand();
+    <!-- Main Content -->
+    <main class="desktop-content">
+      <div id="desktop-content" class="min-h-screen"></div>
+    </main>
+  </div>
+
+  <!-- Mobile Layout -->
+  <div class="md:hidden">
+    <!-- Header -->
+    <header class="glass p-4 sticky top-0 z-40 border-b border-darkBorder">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center">
+          <img id="mobile-avatar" src="https://i.pravatar.cc/150?img=10" class="w-10 h-10 rounded-full mr-3">
+          <div>
+            <div class="font-bold"><span id="mobile-username">DinoUser</span></div>
+            <div class="text-xs text-darkMuted"><span id="mobile-balance">0</span> DINO</div>
+            <div class="text-xs text-darkSecondary"><span id="mobile-stars">0</span> ⭐</div>
+            <div class="text-xs text-darkPrimary"><span id="mobile-ton">0</span> TON</div>
+            <div class="text-xs text-darkMuted"><span id="mobile-dps">0</span>/сек</div>
+          </div>
+        </div>
+        <div class="flex items-center">
+          <div class="mr-3 text-right">
+            <div class="text-xs text-darkMuted">Ур. <span id="mobile-level">1</span></div>
+            <div class="text-xs text-darkPrimary" id="mobile-xp-text">0/150</div>
+          </div>
+          <div class="w-8 h-8 rounded-full bg-darkCard flex items-center justify-center">
+            <i class="fa-regular fa-user text-sm"></i>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main id="mobile-content" class="mobile-tab-content p-4 pb-20"></main>
+
+    <!-- Bottom Navigation -->
+    <nav class="mobile-bottom-nav p-2 grid grid-cols-5 gap-1">
+      <button class="nav-btn flex flex-col items-center py-2 rounded-xl transition-all" data-tab="clicker">
+        <i class="fa-regular fa-hand-pointer text-lg mb-1"></i>
+        <span class="text-xs">Кликер</span>
+      </button>
+      <button class="nav-btn flex flex-col items-center py-2 rounded-xl transition-all" data-tab="dinonet">
+        <i class="fa-solid fa-globe text-lg mb-1"></i>
+        <span class="text-xs">ДиноНет</span>
+      </button>
+      <button class="nav-btn flex flex-col items-center py-2 rounded-xl transition-all" data-tab="business">
+        <i class="fa-solid fa-building text-lg mb-1"></i>
+        <span class="text-xs">Бизнес</span>
+      </button>
+      <button class="nav-btn flex flex-col items-center py-2 rounded-xl transition-all" data-tab="investments">
+        <i class="fa-solid fa-chart-line text-lg mb-1"></i>
+        <span class="text-xs">Инвестиции</span>
+      </button>
+      <button class="nav-btn flex flex-col items-center py-2 rounded-xl transition-all" data-tab="profile">
+        <i class="fa-regular fa-user text-lg mb-1"></i>
+        <span class="text-xs">Профиль</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Modals / notifications -->
+  <div id="modal-root"></div>
+  <div id="toast-root" class="fixed top-3 right-3 space-y-2 z-[999] max-w-xs"></div>
+
+  <script>
+  /*********************
+   * Core Game State
+   *********************/
+  const API = 'http://localhost:3000'; // Change to your server URL if deployed
+  const ECON = {
+    CLICK_INC: 1.5,
+    CLICK_COST_MULT: 1.6,
+    EMISSION_COST_PER_SHARE: 10,
+    CLIENT_COST_DINO: 10000,
+    CLIENT_COST_TON: 0.1,
+    CLIENT_PACK_SIZE: 1000,
+    CLIENT_PACK_COST_STARS: 20,
+    STOCK_BASE_PRICE: 1,
+    STOCK_PRICE_PER_CLIENT: 0.05,
+    STOCK_PRICE_SMOOTH: 0.2,
+    CRYPTO_TON_COST: 10,
+    CRYPTO_STARS_COST: 50,
+    CRYPTO_DINO_COST_MIN: 50,
+    CRYPTO_TON_FIXED_PRICE: 1,
+    CRYPTO_STARS_FIXED_PRICE: 1,
+    CRYPTO_PRICE_PER_INVESTOR: 0.01,
+    CRYPTO_SMOOTH: 0.1,
+    CRYPTO_DPS_RATE_DIVISOR: 10,
+    CRYPTO_OWNER_SHARE_TON_STARS: 0.45,
+    CRYPTO_OWNER_SHARE_DINO: 1.0,
+    REF_REWARD: 1000000,
+    CRYPTO_SUPPLY_LIMIT: 1000
+  };
+
+  const state = {
+    currentTab: "clicker",
+    user: null,
+    currentUserId: null,
+    users: [],
+    companies: [],
+    cryptos: [],
+    wallet: {
+      stocks: {},
+      crypto: {}
+    },
+    messages: [],
+    dinonet: {
+      posts: []
+    },
+    theme: "dark",
+    lastTick: Date.now(),
+    lastInvestUpdate: Date.now(),
+    tgId: null
+  };
+
+  // Elements
+  const $content = () => document.getElementById(isMobile() ? "mobile-content" : "desktop-content");
+  const $balance = () => document.getElementById(isMobile() ? "mobile-balance" : "desktop-balance");
+  const $stars = () => document.getElementById(isMobile() ? "mobile-stars" : "desktop-stars");
+  const $ton = () => document.getElementById(isMobile() ? "mobile-ton" : "desktop-ton");
+  const $dps = () => document.getElementById(isMobile() ? "mobile-dps" : "desktop-dps");
+  const $level = () => document.getElementById(isMobile() ? "mobile-level" : "desktop-level");
+  const $xpText = () => document.getElementById(isMobile() ? "mobile-xp-text" : "desktop-xp-text");
+  const $xpBar = () => document.getElementById("desktop-xp-bar");
+  const $modal = () => document.getElementById("modal-root");
+  const $toast = () => document.getElementById("toast-root");
+  const $mobileUsername = () => document.getElementById("mobile-username");
+  const $mobileAvatar = () => document.getElementById("mobile-avatar");
+
+  /*********************
+   * Utils
+   *********************/
+  function isMobile() {
+    return window.innerWidth < 768;
+  }
+
+  const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+  const fmt = (n, d=2) => {
+    if (n >= 1e9) return (n/1e9).toFixed(d) + "B";
+    if (n >= 1e6) return (n/1e6).toFixed(d) + "M";
+    if (n >= 1e3) return (n/1e3).toFixed(d) + "K";
+    return Number(n).toFixed(d);
+  };
+  const now = () => Date.now();
+
+  const copyText = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast("Ссылка скопирована");
+    } catch {
+      toast("Не удалось скопировать", "error");
+    }
+  };
+
+  function toast(text, type="ok") {
+    const el = document.createElement("div");
+    el.className = `fade-in rounded-xl px-4 py-3 shadow-dino flex items-start ${type==="error"?"bg-red-500/20 border border-red-400/40":"bg-darkCard border border-darkBorder"}`;
+    el.innerHTML = `
+      <i class="fa-solid ${type==="error"?"fa-triangle-exclamation text-red-400":"fa-circle-check text-darkPrimary"} mr-2 mt-0.5"></i>
+      <div>${text}</div>
+    `;
+    $toast().appendChild(el);
+    setTimeout(() => {
+      el.style.opacity = 0;
+      setTimeout(()=> el.remove(), 250);
+    }, 2200);
+  }
+
+  function openModal(innerHTML, onClose = () => {}) {
+    $modal().innerHTML = `
+      <div class="fixed inset-0 bg-black/70 flex items-end sm:items-center sm:justify-center z-[999] p-4">
+        <div class="bg-darkCard w-full max-w-md rounded-2xl p-5 border border-darkBorder shadow-card max-h-[90vh] overflow-y-auto">
+          <button onclick="closeModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-darkBgLight flex items-center justify-center hover:bg-darkCardHover">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+          ${innerHTML}
+        </div>
+      </div>
+    `;
+    $modal().firstChild.addEventListener("click", (e)=>{
+      if (e.target === e.currentTarget) closeModal();
+    });
+  }
+
+  function closeModal(){ $modal().innerHTML = ""; }
+
+  /*********************
+   * API Helpers
+   *********************/
+  async function apiRequest(endpoint, method = 'GET', body = null) {
+    const options = {
+      method,
+      headers: { 'Content-Type': 'application/json' }
+    };
+    if (body) options.body = JSON.stringify(body);
+    const res = await fetch(`${API}${endpoint}`, options);
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    return res.json();
+  }
+
+  async function fetchUser(tg_id) {
+    try {
+      return await apiRequest(`/user/${tg_id}`);
+    } catch {
+      return null;
+    }
+  }
+
+  async function registerUser(tgUser) {
+    return await apiRequest('/register', 'POST', {
+      tg_id: tgUser.id,
+      username: tgUser.username || 'DinoUser',
+      name: `${tgUser.first_name} ${tgUser.last_name || ''}`,
+      avatar: tgUser.photo_url || "https://i.pravatar.cc/150?img=10"
+    });
+  }
+
+  async function updateUserField(field, value) {
+    await apiRequest('/update-user-field', 'POST', { user_id: state.currentUserId, field, value });
+  }
+
+  async function fetchAllData() {
+    const [users, companies, cryptos, posts, messages, portfolios, leaderboard] = await Promise.all([
+      apiRequest('/users'),
+      apiRequest('/companies'),
+      apiRequest('/cryptos'),
+      apiRequest('/posts'),
+      apiRequest(`/messages/${state.currentUserId}`),
+      apiRequest(`/portfolios/${state.currentUserId}`),
+      apiRequest('/leaderboard')
+    ]);
+
+    state.users = users;
+    state.companies = companies;
+    state.cryptos = cryptos;
+    state.dinonet.posts = posts;
+    state.messages = messages;
+
+    // Build wallet from portfolios
+    state.wallet.stocks = {};
+    state.wallet.crypto = {};
+    portfolios.forEach(p => {
+      if (p.asset_type === 'company') {
+        state.wallet.stocks[p.asset_id] = { shares: p.amount, avgPrice: p.avg_price, currency: 'DINO' };
+      } else if (p.asset_type === 'crypto') {
+        const crypto = state.cryptos.find(c => c.id === p.asset_id);
+        state.wallet.crypto[p.asset_id] = { amount: p.amount, avgPrice: p.avg_price, currency: crypto ? crypto.currency : 'DINO' };
+      }
+    });
+
+    // Refresh user
+    state.user = await fetchUser(state.tgId);
+
+    // Calc dps
+    state.user.dps = calculateDps();
+  }
+
+  async function syncUser() {
+    await updateUserField('balance', state.user.balance);
+    await updateUserField('dps', state.user.dps);
+    await updateUserField('xp', state.user.xp);
+    await updateUserField('level', state.user.level);
+    await updateUserField('xp_next', state.user.xp_next);
+    await updateUserField('clicks', state.user.clicks);
+    await updateUserField('per_click', state.user.per_click);
+    await updateUserField('click_upgrade_cost', state.user.click_upgrade_cost);
+    // Add other fields as needed
+  }
+
+  /*********************
+   * Random Modals
+   *********************/
+  function showInviteModal() {
+    if (localStorage.getItem('noInvite')) return;
+    const refLink = `https://t.me/YOUR_GAME_BOT?start=ref-game-${state.currentUserId}`;
+    openModal(`
+      <div class="space-y-4">
+        <h2 class="text-xl font-bold">Пригласи друга!</h2>
+        <p>Получи ${fmt(ECON.REF_REWARD)} DINO за каждого приглашенного.</p>
+        <div class="flex items-center justify-between bg-darkBgLight rounded-xl p-3">
+          <div class="text-sm truncate">${refLink}</div>
+          <button class="px-3 py-1.5 rounded-lg bg-darkPrimary/20 text-sm" onclick="copyText('${refLink}')">
+            <i class="fa-regular fa-copy mr-1"></i>Копировать
+          </button>
+        </div>
+        <button class="w-full py-3 rounded-xl bg-darkBgLight" onclick="closeModal()">Закрыть</button>
+        <button class="w-full py-3 rounded-xl bg-darkDanger text-white" onclick="localStorage.setItem('noInvite', true); closeModal();">Больше не показывать</button>
+      </div>
+    `);
+  }
+
+  function showSubscribeModal() {
+    if (localStorage.getItem('noSubscribe')) return;
+    openModal(`
+      <div class="space-y-4">
+        <h2 class="text-xl font-bold">Подпишись на канал!</h2>
+        <p>Будь в курсе всех событий.</p>
+        <a href="YOUR_CHANNEL_LINK" class="block py-3 rounded-xl bg-darkPrimary text-white text-center">Подписаться</a>
+        <button class="w-full py-3 rounded-xl bg-darkBgLight" onclick="closeModal()">Закрыть</button>
+        <button class="w-full py-3 rounded-xl bg-darkDanger text-white" onclick="localStorage.setItem('noSubscribe', true); closeModal();">Больше не показывать</button>
+      </div>
+    `);
+  }
+
+  function showNoSellWarn() {
+    if (localStorage.getItem('noSellWarn')) return;
+    openModal(`
+      <div class="space-y-4">
+        <h2 class="text-xl font-bold">Внимание!</h2>
+        <p>Покупка за TON или STARS дает ежесекундный доход, но продать нельзя.</p>
+        <button class="w-full py-3 rounded-xl bg-darkBgLight" onclick="closeModal()">Закрыть</button>
+        <button class="w-full py-3 rounded-xl bg-darkDanger text-white" onclick="localStorage.setItem('noSellWarn', true); closeModal();">Больше не показывать</button>
+      </div>
+    `);
+  }
+
+  /*********************
+   * Theme Toggle
+   *********************/
+  async function toggleTheme() {
+    state.theme = state.theme === "dark" ? "light" : "dark";
+    document.body.classList.remove("dark", "light");
+    document.body.classList.add(state.theme);
+    await updateUserField('theme', state.theme);
+    renderIfTab("profile", renderProfile);
+  }
+
+  /*********************
+   * Price Engines
+   *********************/
+  function stockFairPrice(company) {
+    const target = ECON.STOCK_BASE_PRICE + company.clients * ECON.STOCK_PRICE_PER_CLIENT;
+    if (company.last_price == null) return +(target.toFixed(4));
+    return +(company.last_price + (target - company.last_price) * ECON.STOCK_PRICE_SMOOTH).toFixed(4);
+  }
+
+  function cryptoFairPrice(coin) {
+    if (coin.fixed) return coin.price;
+    const base = coin.initial_price || ECON.CRYPTO_DINO_COST_MIN / ECON.CRYPTO_SUPPLY_LIMIT;
+    const target = base + coin.investors * ECON.CRYPTO_PRICE_PER_INVESTOR;
+    if (coin.last_price == null) return +(target.toFixed(4));
+    return +(coin.last_price + (target - coin.last_price) * ECON.CRYPTO_SMOOTH).toFixed(4);
+  }
+
+  function calculateDps() {
+    return Object.entries(state.wallet.crypto).reduce((sum, [id, w]) => {
+      const co = state.cryptos.find(x => x.id === parseInt(id));
+      if (co) sum += w.amount * co.dps_rate;
+      return sum;
+    }, 0);
+  }
+
+  /*********************
+   * Game Loop
+   *********************/
+  function tick() {
+    const dt = Math.max(0, Math.min(1, (now() - state.lastTick)/1000));
+    state.lastTick = now();
+    state.user.dps = calculateDps();
+    state.user.balance += state.user.dps * dt;
+    updateHeader();
+
+    if (state.user.xp >= state.user.xp_next) {
+      state.user.level++;
+      state.user.xp -= state.user.xp_next;
+      state.user.xp_next = Math.round(state.user.xp_next * 1.5);
+      toast(`Уровень повышен! Теперь вы ${state.user.level} уровня`);
+      updateLevel();
+    }
+
+    if (now() - state.lastInvestUpdate > 60000) {
+      recalcPrices();
+      renderIfTab("investments", renderInvestments);
+      state.lastInvestUpdate = now();
+    }
+    requestAnimationFrame(tick);
+  }
+
+  setInterval(syncUser, 5000); // Sync every 5s
+
+  function updateHeader() {
+    $balance().textContent = fmt(state.user.balance);
+    $stars().textContent = fmt(state.user.stars);
+    $ton().textContent = fmt(state.user.ton);
+    $dps().textContent = fmt(state.user.dps);
+    if (isMobile()) {
+      $mobileUsername().textContent = state.user.username;
+      $mobileAvatar().src = state.user.avatar;
+    }
+  }
+
+  function updateLevel() {
+    $level().textContent = state.user.level;
+    $xpText().textContent = `${Math.floor(state.user.xp)}/${state.user.xp_next}`;
+    if ($xpBar()) $xpBar().style.width = `${(state.user.xp / state.user.xp_next) * 100}%`;
+  }
+
+  /*********************
+   * Navigation
+   *********************/
+  async function setTab(tab) {
+    state.currentTab = tab;
+
+    document.querySelectorAll(".desktop-nav-btn").forEach(b => {
+      b.classList.remove("bg-darkPrimary", "text-white");
+      b.classList.add("text-darkMuted", "hover:bg-darkCardHover");
+    });
+    const desktopBtn = document.querySelector(`.desktop-nav-btn[data-tab='${tab}']`);
+    if (desktopBtn) {
+      desktopBtn.classList.remove("text-darkMuted", "hover:bg-darkCardHover");
+      desktopBtn.classList.add("bg-darkPrimary", "text-white");
+    }
+
+    document.querySelectorAll(".nav-btn").forEach(b => {
+      b.classList.remove("active", "bg-darkCardHover");
+    });
+    const mobileBtn = document.querySelector(`.nav-btn[data-tab='${tab}']`);
+    if (mobileBtn) {
+      mobileBtn.classList.add("active", "bg-darkCardHover");
+    }
+
+    await fetchAllData(); // Refresh data on tab change
+
+    if (tab === "clicker") renderClicker();
+    if (tab === "dinonet") renderDinoNet();
+    if (tab === "business") renderBusiness();
+    if (tab === "investments") renderInvestments();
+    if (tab === "profile") renderProfile();
+  }
+
+  function renderIfTab(tab, fn){ if (state.currentTab === tab) fn(); }
+
+  /*********************
+   * Clicker
+   *********************/
+  function renderClicker() {
+    $content().innerHTML = `
+      <section class="space-y-6">
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <div class="text-sm text-darkMuted">Доход за клик</div>
+              <div class="text-xl font-bold text-darkPrimary">${fmt(state.user.per_click)} DINO</div>
+            </div>
+            <button class="px-4 py-2.5 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium flex items-center" onclick="buyClick()">
+              <i class="fa-solid fa-arrow-up mr-2"></i>+${ECON.CLICK_INC} за ${fmt(state.user.click_upgrade_cost)}
+            </button>
+          </div>
+          <div class="text-xs text-darkMuted">Всего кликов: ${state.user.clicks}</div>
+        </div>
+
+        <div id="click-area" class="card p-8 text-center active:scale-[.995] transition cursor-pointer relative overflow-hidden">
+          <div class="text-8xl mb-2 select-none leading-none animate-float">🦖</div>
+          <div class="text-lg font-medium mb-1">Кликай по динозавру</div>
+          <div class="text-sm text-darkMuted">Зарабатывай DINO и улучшай свою экономику</div>
+        </div>
+      </section>
+    `;
+
+    document.getElementById("click-area").addEventListener("click", async (e) => {
+      const inc = state.user.per_click;
+      state.user.balance += inc;
+      state.user.clicks++;
+      state.user.xp += 0.1;
+      updateHeader();
+      updateLevel();
+
+      const coin = document.createElement("div");
+      coin.className = "coin-pop absolute text-darkSecondary font-medium z-10";
+      coin.style.left = (e.offsetX - 10) + "px";
+      coin.style.top = (e.offsetY - 10) + "px";
+      coin.textContent = `+${inc.toFixed(2)}`;
+      e.currentTarget.appendChild(coin);
+      setTimeout(() => coin.remove(), 600);
+
+      await syncUser();
+    });
+  }
+
+  async function buyClick() {
+    if (state.user.balance < state.user.click_upgrade_cost) return toast("Не хватает DINO", "error");
+    state.user.balance -= state.user.click_upgrade_cost;
+    state.user.per_click += ECON.CLICK_INC;
+    state.user.click_upgrade_cost = Math.ceil(state.user.click_upgrade_cost * ECON.CLICK_COST_MULT);
+    state.user.xp += 10;
+    updateHeader();
+    updateLevel();
+    renderClicker();
+    await syncUser();
+    toast("Улучшение куплено!");
+  }
+
+  /*********************
+   * DinoNet
+   *********************/
+  let dinonetTab = "feed";
+
+  function renderDinoNet() {
+    $content().innerHTML = `
+      <section class="space-y-5">
+        <div class="card p-2">
+          <div class="grid grid-cols-3 gap-2">
+            <button class="tab-btn ${dinonetTab==='feed'?'active':''} rounded-xl py-3 font-medium" onclick="setDinoNetTab('feed')">
+              <i class="fa-solid fa-rss mr-2"></i>Лента
+            </button>
+            <button class="tab-btn ${dinonetTab==='myposts'?'active':''} rounded-xl py-3 font-medium" onclick="setDinoNetTab('myposts')">
+              <i class="fa-solid fa-file-lines mr-2"></i>Мои
+            </button>
+            <button class="tab-btn ${dinonetTab==='leaders'?'active':''} rounded-xl py-3 font-medium" onclick="setDinoNetTab('leaders')">
+              <i class="fa-solid fa-trophy mr-2"></i>Лидеры
+            </button>
+          </div>
+        </div>
+
+        ${dinonetTab==='feed' ? feedPanelHTML() : dinonetTab==='myposts' ? myPostsPanelHTML() : leadersPanelHTML()}
+      </section>
+    `;
+    if (dinonetTab === 'feed') {
+      document.getElementById('add-media-btn').addEventListener('click', () => {
+        document.getElementById('media-upload').click();
+      });
+      document.getElementById('media-upload').addEventListener('change', function(e) {
+        handleMediaPreview(this.files);
+      });
+    }
+  }
+
+  function setDinoNetTab(t){ dinonetTab=t; renderDinoNet(); }
+
+  function feedPanelHTML() {
+    const filteredPosts = state.dinonet.posts;
+    return `
+      <div class="space-y-5">
+        <div class="card p-5">
+          <div class="flex gap-3 mb-4">
+            <img src="${state.user.avatar}" class="w-12 h-12 rounded-full border-2 border-darkPrimary" />
+            <div class="flex-1">
+              <textarea id="post-text" rows="${isMobile() ? 2 : 3}" class="w-full bg-darkBgLight border border-darkBorder rounded-xl p-3 outline-none resize-none text-sm" placeholder="Что нового в мире динозавров?"></textarea>
+              <div id="post-media-preview" class="mt-2 flex flex-wrap gap-2"></div>
+            </div>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4 text-darkMuted">
+              <button id="add-media-btn" class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-darkCardHover">
+                <i class="fa-regular fa-image"></i>
+              </button>
+              <button class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-darkCardHover">
+                <i class="fa-regular fa-face-smile"></i>
+              </button>
+              <input type="file" id="media-upload" accept="image/*" class="hidden" multiple>
+            </div>
+            <button class="px-4 py-2 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium flex items-center" onclick="publishPost()">
+              <i class="fa-solid fa-paper-plane mr-2"></i>Опубликовать
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-4" id="post-feed">
+          ${filteredPosts.slice().sort((a,b)=>b.created_at-a.created_at).map(p=>postItemHTML(p)).join("") || '<div class="text-center py-10"><i class="fa-regular fa-comment-dots text-4xl text-darkMuted mb-3"></i><p>Постов пока нет</p></div>'}
+        </div>
+      </div>
+    `;
+  }
+
+  function myPostsPanelHTML() {
+    const myPosts = state.dinonet.posts.filter(p => p.author_id === state.currentUserId).sort((a,b)=>b.created_at-a.created_at);
+    return `
+      <div class="space-y-4">
+        ${myPosts.map(p=>postItemHTML(p, true)).join("") || '<div class="text-center py-10"><i class="fa-regular fa-comment-dots text-4xl text-darkMuted mb-3"></i><p>Нет ваших постов</p></div>'}
+      </div>
+    `;
+  }
+
+  function leadersPanelHTML() {
+    const leaders = state.users.sort((a,b) => b.level - a.level).slice(0,10);
+    return `
+      <div class="space-y-4">
+        ${leaders.map(u => {
+          const owned = [...state.companies.filter(c => c.owner_id === u.id).map(c => c.name), ...state.cryptos.filter(co => co.creator_id === u.id).map(co => co.name)].join(", ");
+          return `
+            <div class="card p-5">
+              <div class="flex items-center gap-3 mb-3">
+                <img src="${u.avatar}" class="w-10 h-10 rounded-full" />
+                <div class="flex-1">
+                  <div class="font-semibold">${u.name} (@${u.username})</div>
+                  <div class="text-sm text-darkMuted">Уровень: ${u.level || 1} | DINO: ${fmt(u.balance || 0)}</div>
+                  <div class="text-xs text-darkPrimary">Владелец: ${owned || "Ничего"}</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("") || '<div class="text-center py-10"><i class="fa-solid fa-trophy text-4xl text-darkMuted mb-3"></i><p>Нет лидеров</p></div>'}
+      </div>
+    `;
+  }
+
+  function postItemHTML(p, isMy = false){
+    const dt = new Date(p.created_at).toLocaleString();
+    const author = state.users.find(u => u.id === p.author_id) || state.user;
+    const ownedCompanies = state.companies.filter(c => c.owner_id === p.author_id).map(c => c.name);
+    const ownedCryptos = state.cryptos.filter(co => co.creator_id === p.author_id).map(co => co.name);
+    const ownedText = [...ownedCompanies, ...ownedCryptos].join(", ");
+    const ownedHTML = ownedText ? `<div class="text-xs text-darkPrimary mt-1">Владелец: ${ownedText}</div>` : '';
+    const mediaHTML = p.media && p.media.length > 0 ? `<div class="mt-3 grid grid-cols-2 gap-2">${p.media.map(url => `<img src="${url}" class="rounded-lg border border-darkBorder">`).join('')}</div>` : '';
+    const textClass = isMobile() ? 'post-text' : '';
+    const usernameHTML = author.show_username ? `<span class="text-sm text-darkMuted">@${author.username}</span>` : '';
+    const moreBtn = isMobile() && p.content.length > 100 ? `<button id="more_${p.id}" onclick="togglePostExpand('${p.id}')" class="text-darkPrimary text-sm mt-1">Подробнее</button>` : '';
+
+    return `
+      <article id="post_${p.id}" class="card p-5 fade-in">
+        <div class="flex items-start gap-3 mb-3">
+          <img src="${author.avatar}" class="w-10 h-10 rounded-full" />
+          <div class="flex-1">
+            <div class="flex items-center justify-between mb-1">
+              <div class="font-semibold cursor-pointer" onclick="openProfile('${p.author_id}')">${author.name} ${usernameHTML}</div>
+              <div class="text-xs text-darkMuted">${dt}</div>
+            </div>
+            ${ownedHTML}
+            <div class="mt-2 whitespace-pre-wrap text-sm ${textClass}">${escapeHtml(p.content)}</div>
+            ${moreBtn}
+            ${mediaHTML}
+          </div>
+        </div>
+        <div class="flex items-center gap-4 text-sm border-t border-darkBorder pt-3">
+          <button onclick="likePost('${p.id}')" class="flex items-center text-darkMuted hover:text-darkSecondary">
+            <i class="fa-regular fa-heart mr-1.5"></i>${p.likes}
+          </button>
+          <div class="flex items-center text-darkMuted">
+            <i class="fa-regular fa-eye mr-1.5"></i>${p.views}
+          </div>
+          <button onclick="deletePost('${p.id}')" class="flex items-center text-darkMuted hover:text-red-400 ml-auto ${p.author_id !== state.currentUserId && !isMy ? 'hidden' : ''}">
+            <i class="fa-regular fa-trash-can mr-1.5"></i>Удалить
+          </button>
+        </div>
+      </article>
+    `;
+  }
+
+  function togglePostExpand(id) {
+    const post = document.getElementById(`post_${id}`);
+    post.classList.toggle('post-expanded');
+    const btn = document.getElementById(`more_${id}`);
+    btn.textContent = post.classList.contains('post-expanded') ? 'Свернуть' : 'Подробнее';
+  }
+
+  function escapeHtml(str){ return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+
+  function handleMediaPreview(files) {
+    const previewContainer = document.getElementById('post-media-preview');
+    previewContainer.innerHTML = '';
+
+    Array.from(files).forEach(file => {
+      if (!file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.className = 'w-16 h-16 rounded object-cover border border-darkBorder';
+        previewContainer.appendChild(img);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function publishPost(){
+    const ta = document.getElementById("post-text");
+    const text = (ta.value || "").trim();
+    const mediaFiles = document.getElementById('media-upload').files;
+
+    if (!text && mediaFiles.length === 0) return toast("Пустой пост", "error");
+
+    let media = [];
+    if (mediaFiles.length > 0) {
+      media = await Promise.all(Array.from(mediaFiles).map(file => new Promise((resolve) => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        } else {
+          resolve(null);
         }
+      })));
+      media = media.filter(m => m);
+    }
 
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const dpr = window.devicePixelRatio || 1;
+    await apiRequest('/posts', 'POST', { user_id: state.currentUserId, content: text, media });
+    ta.value = "";
+    document.getElementById('media-upload').value = "";
+    document.getElementById('post-media-preview').innerHTML = "";
+    await fetchAllData();
+    renderDinoNet();
+    toast("Пост опубликован!");
+  }
 
-        function resizeCanvas() {
-            canvas.style.width = window.innerWidth + 'px';
-            canvas.style.height = window.innerHeight + 'px';
-            canvas.width = window.innerWidth * dpr;
-            canvas.height = window.innerHeight * dpr;
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.scale(dpr, dpr);
-        }
+  async function likePost(id){
+    await apiRequest('/like-post', 'POST', { post_id: id });
+    await fetchAllData();
+    renderDinoNet();
+  }
 
-        resizeCanvas();
+  async function deletePost(id){
+    await apiRequest('/delete-post', 'POST', { post_id: id });
+    await fetchAllData();
+    renderDinoNet();
+    toast("Пост удалён");
+  }
 
-        // Game variables
-        let player = {
-            x: window.innerWidth / 2,
-            y: window.innerHeight - 100,
-            radius: 20,
-            velocityY: 0,
-            velocityX: 0,
-            onGround: false,
-            jumpCount: 0,
-            maxJumps: 2,
-            glowIntensity: 0
+  /*********************
+   * Business
+   *********************/
+  let businessTab = "companies";
+
+  function renderBusiness() {
+    $content().innerHTML = `
+      <section class="space-y-5">
+        <div class="card p-2">
+          <div class="grid grid-cols-3 gap-2">
+            <button class="tab-btn ${businessTab==='companies'?'active':''} rounded-xl py-3 font-medium" onclick="setBusinessTab('companies')">
+              <i class="fa-solid fa-building mr-2"></i>Бизнес
+            </button>
+            <button class="tab-btn ${businessTab==='crypto'?'active':''} rounded-xl py-3 font-medium" onclick="setBusinessTab('crypto')">
+              <i class="fa-solid fa-coins mr-2"></i>Крипта
+            </button>
+            <button class="tab-btn ${businessTab==='referrals'?'active':''} rounded-xl py-3 font-medium" onclick="setBusinessTab('referrals')">
+              <i class="fa-solid fa-link mr-2"></i>Рефералы
+            </button>
+          </div>
+        </div>
+
+        ${businessTab==='companies' ? companiesPanelHTML() : businessTab==='crypto' ? cryptoPanelHTML() : referralsPanelHTML()}
+      </section>
+    `;
+  }
+
+  function setBusinessTab(t){ businessTab=t; renderBusiness(); }
+
+  function companiesPanelHTML(){
+    const my = state.companies.filter(c => c.owner_id === state.currentUserId);
+    return `
+      <div class="space-y-5">
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-semibold text-lg mb-1">Создать компанию</h3>
+              <p class="text-sm text-darkMuted">Бесплатно. Имя должно быть уникальным.</p>
+            </div>
+            <button class="px-4 py-2.5 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium flex items-center" onclick="openCreateCompany()">
+              <i class="fa-solid fa-plus mr-2"></i>Создать
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="font-semibold text-lg mb-4 flex items-center">
+            <i class="fa-solid fa-building-user mr-2"></i>Мои компании
+          </h3>
+          <div class="space-y-4">
+            ${my.length ? my.map(co => `
+              <div class="card p-5 cursor-pointer" onclick="openCompanyDetails('${co.id}')">
+                <div class="flex items-center mb-2">
+                  ${co.photo ? `<img src="${co.photo}" class="w-8 h-8 rounded-full mr-2">` : ''}
+                  <div class="font-bold text-lg mb-1">${co.name} (${co.ticker})</div>
+                </div>
+                <div class="text-sm text-darkMuted">Клиенты: ${co.clients} | Цена акции: ${fmt(co.last_price || stockFairPrice(co))}</div>
+              </div>
+            `).join("") : '<div class="text-center py-10 card"><i class="fa-regular fa-building text-4xl text-darkMuted mb-3"></i><p>Ещё нет компаний</p></div>'}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function openCreateCompany(){
+    openModal(`
+      <div class="space-y-4">
+        <h2 class="text-xl font-bold mb-2">Новая компания</h2>
+        <p class="text-sm text-red-400">Не пишите ничего плохого. Мы не несем ответственности. Мы за традиционные ценности.</p>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium mb-1">Название компании</label>
+            <input id="newco_name" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3" placeholder="Например: DinoSoft">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Тикер (акроним)</label>
+            <input id="newco_ticker" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3" placeholder="Например: DINO" maxlength="6">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Фото (загрузка)</label>
+            <input id="newco_photo" type="file" accept="image/*" class="hidden">
+            <button onclick="document.getElementById('newco_photo').click()" class="px-4 py-2 rounded-xl bg-darkPrimary text-white">Загрузить фото</button>
+            <div id="newco_photo_preview" class="mt-2"></div>
+          </div>
+        </div>
+        <button class="w-full py-3 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium mt-2" onclick="createCompany()">
+          Создать компанию
+        </button>
+        <p class="text-xs text-darkMuted mt-3">При создании выпускается 1000 акций, которые сразу попадают в ваш инвестиционный портфель.</p>
+      </div>
+    `);
+
+    document.getElementById('newco_photo').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          document.getElementById('newco_photo_preview').innerHTML = `<img src="${ev.target.result}" class="w-16 h-16 rounded-full">`;
         };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
 
-        let camera = { y: 0 };
-        let platforms = [];
-        let obstacles = [];
-        let bitcoins = [];
-        let multiplierItems = [];
-        let particles = [];
-        let altitude = 0;
-        let totalBitcoins = 0;
-        let multiplier = 1.0;
-        let keys = {};
-        let gameRunning = true;
-        let autoPlay = false;
+  async function createCompany(){
+    const name = document.getElementById("newco_name").value.trim();
+    const ticker = document.getElementById("newco_ticker").value.trim().replace(/[^A-Z0-9]/g,"").slice(0,6).toUpperCase();
+    const photoFile = document.getElementById("newco_photo").files[0];
+    let photo = "";
+    if (!name || !ticker) return toast("Заполните имя и тикер", "error");
 
-        // Physics
-        const gravity = 0.6;
-        const jumpPower = -16;
-        const platformWidth = 150;
-        const platformHeight = 25;
-        const obstacleSize = 20;
-        const platformSpacing = 120;
+    if (photoFile) {
+      photo = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(photoFile);
+      });
+    }
 
-        // Touch variables
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let touchOriginalStartX = 0;
-        let touchOriginalStartY = 0;
-        let touchEndX = 0;
-        let touchEndY = 0;
-        const tapThreshold = 20; // Pixels to distinguish tap from swipe
+    await apiRequest('/companies', 'POST', { owner_id: state.currentUserId, name, ticker, photo });
+    closeModal();
+    await fetchAllData();
+    renderBusiness();
+    renderIfTab("investments", renderInvestments);
+    toast("Компания создана!");
+  }
 
-        // Create background
-        function createBackground() {
-            const starsContainer = document.getElementById('stars');
-            for (let i = 0; i < 100; i++) {
-                const star = document.createElement('div');
-                star.className = 'star';
-                star.style.width = Math.random() * 3 + 1 + 'px';
-                star.style.height = star.style.width;
-                star.style.left = Math.random() * 100 + '%';
-                star.style.top = Math.random() * 70 + '%';
-                star.style.animationDelay = Math.random() * 3 + 's';
-                star.style.animationDuration = (Math.random() * 2 + 2) + 's';
-                starsContainer.appendChild(star);
-            }
+  function openCompanyDetails(id) {
+    const c = state.companies.find(x => x.id === parseInt(id));
+    if (!c) return;
+    const avail = c.total_issued - c.sold_shares;
+    const price = c.last_price ?? stockFairPrice(c);
+    const ref = `https://t.me/YOUR_GAME_BOT?start=ref-${c.id}`;
+    const canEmit = c.initial_shares + c.clients*10 - c.total_issued;
+    openModal(`
+      <div class="space-y-4">
+        <h2 class="font-bold text-xl mb-1">${c.name} (${c.ticker})</h2>
+        ${c.photo ? `<img src="${c.photo}" class="w-16 h-16 rounded-full mx-auto">` : ''}
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div class="bg-darkBgLight rounded-xl p-3">
+            <div class="text-darkMuted text-sm mb-1">Клиенты</div>
+            <div class="font-semibold text-lg">${c.clients}</div>
+          </div>
+          <div class="bg-darkBgLight rounded-xl p-3">
+            <div class="text-darkMuted text-sm mb-1">Цена акции</div>
+            <div class="font-semibold text-lg text-darkPrimary">${fmt(price)}</div>
+          </div>
+          <div class="bg-darkBgLight rounded-xl p-3">
+            <div class="text-darkMuted text-sm mb-1">Доступно акций</div>
+            <div class="font-semibold text-lg">${avail}</div>
+          </div>
+          <div class="bg-darkBgLight rounded-xl p-3">
+            <div class="text-darkMuted text-sm mb-1">Доход от продаж</div>
+            <div class="font-semibold text-lg">${fmt(c.revenue)}</div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between bg-darkBgLight rounded-xl p-3 mb-4">
+          <div class="text-sm truncate"><span class="text-darkMuted">Реф. ссылка: </span><span>${ref}</span></div>
+          <button class="px-3 py-1.5 rounded-lg bg-darkPrimary/20 hover:bg-darkPrimary/30 text-sm" onclick="copyText('${ref}')">
+            <i class="fa-regular fa-copy mr-1"></i>Копировать
+          </button>
+        </div>
+        <div class="bg-darkBgLight rounded-xl p-3">
+          <div class="font-semibold mb-2 flex items-center"><i class="fa-solid fa-print mr-2 text-darkSecondary"></i>Эмиссия акций</div>
+          <div class="text-xs text-darkMuted mb-2">Доступно к выпуску: ${canEmit} акций</div>
+          <div class="flex items-center gap-2">
+            <input id="emi_${c.id}" type="number" min="1" class="flex-1 bg-darkCard border border-darkBorder rounded-lg px-3 py-2" placeholder="Количество">
+            <button class="px-3 py-2 rounded-lg bg-darkPrimary hover:bg-darkPrimaryHover text-white" onclick="emitShares('${c.id}')">
+              Выпустить
+            </button>
+          </div>
+          <div class="text-xs text-darkSecondary mt-1">Стоимость: ${ECON.EMISSION_COST_PER_SHARE} DINO/акция</div>
+        </div>
+        <div class="bg-darkBgLight rounded-xl p-3">
+          <div class="font-semibold mb-2 flex items-center"><i class="fa-solid fa-users mr-2 text-darkPrimary"></i>Привлечение клиентов</div>
+          <div class="text-xs text-darkMuted mb-2">Покупайте клиентов для роста цены акций</div>
+          <div class="grid grid-cols-1 gap-2">
+            <button class="px-3 py-2.5 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white flex items-center justify-center" onclick="buyClientDino('${c.id}')">
+              <i class="fa-solid fa-user-plus mr-2"></i>+1 за ${fmt(ECON.CLIENT_COST_DINO)} DINO
+            </button>
+            <button class="px-3 py-2.5 rounded-xl bg-indigo-500/90 hover:bg-indigo-600 text-white flex items-center justify-center" onclick="buyClientStars('${c.id}')">
+              <i class="fa-solid fa-users-rays mr-2"></i>+${ECON.CLIENT_PACK_SIZE} за ${ECON.CLIENT_PACK_COST_STARS} ⭐
+            </button>
+            <button class="px-3 py-2.5 rounded-xl bg-blue-500/90 hover:bg-blue-600 text-white flex items-center justify-center" onclick="buyClientTon('${c.id}')">
+              <i class="fa-solid fa-user-plus mr-2"></i>+1 за ${fmt(ECON.CLIENT_COST_TON)} TON
+            </button>
+          </div>
+        </div>
+        <button class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium mt-4" onclick="confirmDeleteCompany('${c.id}')">
+          Удалить компанию
+        </button>
+      </div>
+    `);
+  }
+
+  function confirmDeleteCompany(id, stage=1) {
+    const msg = stage === 1 ? "Вы уверены?" : "Подтвердите ещё раз.";
+    openModal(`
+      <div class="space-y-4">
+        <h2 class="text-xl font-bold">Удаление компании</h2>
+        <p>${msg}</p>
+        <button class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white" onclick="${stage === 1 ? `confirmDeleteCompany('${id}', 2)` : `deleteCompany('${id}')`}">
+          Да, удалить
+        </button>
+        <button class="w-full py-3 rounded-xl bg-darkBgLight" onclick="closeModal()">Отмена</button>
+      </div>
+    `);
+  }
+
+  async function deleteCompany(id) {
+    await apiRequest('/delete-company', 'POST', { company_id: id });
+    closeModal();
+    await fetchAllData();
+    renderBusiness();
+    renderInvestments();
+    toast("Компания удалена");
+  }
+
+  async function emitShares(id){
+    const c = state.companies.find(x=>x.id===parseInt(id)); if (!c) return;
+    const input = document.getElementById("emi_"+id);
+    let n = parseInt(input.value || "0");
+    if (!n || n < 1) return toast("Введите количество", "error");
+    const can = c.initial_shares + c.clients*10 - c.total_issued;
+    n = clamp(n, 0, can);
+    if (n <= 0) return toast("Нет доступной эмиссии", "error");
+    const cost = n * ECON.EMISSION_COST_PER_SHARE;
+    if (state.user.balance < cost) return toast("Не хватает DINO", "error");
+    await apiRequest('/emit-shares', 'POST', { company_id: id, amount: n, cost });
+    await fetchAllData();
+    closeModal();
+    openCompanyDetails(id);
+    renderIfTab("investments", renderInvestments);
+    toast(`Выпущено ${n} акций (-${fmt(cost)} DINO)`);
+  }
+
+  async function buyClientDino(id){
+    const c = state.companies.find(x=>x.id===parseInt(id)); if (!c) return;
+    if (state.user.balance < ECON.CLIENT_COST_DINO) return toast("Не хватает DINO", "error");
+    await apiRequest('/buy-client', 'POST', { company_id: id, type: 'dino', amount: 1, cost: ECON.CLIENT_COST_DINO });
+    await fetchAllData();
+    closeModal();
+    openCompanyDetails(id);
+    renderIfTab("investments", renderInvestments);
+    toast("+1 клиент");
+  }
+
+  async function buyClientStars(id){
+    const c = state.companies.find(x=>x.id===parseInt(id)); if (!c) return;
+    if (state.user.stars < ECON.CLIENT_PACK_COST_STARS) return toast("Не хватает ⭐", "error");
+    await apiRequest('/buy-client', 'POST', { company_id: id, type: 'stars', amount: ECON.CLIENT_PACK_SIZE, cost: ECON.CLIENT_PACK_COST_STARS });
+    await fetchAllData();
+    closeModal();
+    openCompanyDetails(id);
+    renderIfTab("investments", renderInvestments);
+    toast(`+${ECON.CLIENT_PACK_SIZE} клиентов`);
+  }
+
+  async function buyClientTon(id){
+    const c = state.companies.find(x=>x.id===parseInt(id)); if (!c) return;
+    if (state.user.ton < ECON.CLIENT_COST_TON) return toast("Не хватает TON", "error");
+    await apiRequest('/buy-client', 'POST', { company_id: id, type: 'ton', amount: 1, cost: ECON.CLIENT_COST_TON });
+    await fetchAllData();
+    closeModal();
+    openCompanyDetails(id);
+    renderIfTab("investments", renderInvestments);
+    toast("+1 клиент");
+  }
+
+  function cryptoPanelHTML(){
+    const my = state.cryptos.filter(co=>co.creator_id===state.currentUserId);
+    return `
+      <div class="space-y-5">
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-semibold text-lg mb-1">Создать криптовалюту</h3>
+              <p class="text-sm text-darkMuted">Выберите способ создания.</p>
+            </div>
+            <button class="px-4 py-2.5 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium flex items-center" onclick="openCreateCrypto()">
+              <i class="fa-solid fa-plus mr-2"></i>Создать
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="font-semibold text-lg mb-4 flex items-center">
+            <i class="fa-solid fa-coins mr-2"></i>Мои токены
+          </h3>
+          <div class="space-y-4">
+            ${my.length ? my.map(co => `
+              <div class="card p-5 cursor-pointer" onclick="openCryptoDetails('${co.id}')">
+                <div class="flex items-center mb-2">
+                  ${co.photo ? `<img src="${co.photo}" class="w-8 h-8 rounded-full mr-2">` : ''}
+                  <div class="font-bold text-lg mb-1">${co.name} (${co.ticker})</div>
+                </div>
+                <div class="text-sm text-darkMuted">Инвесторов: ${co.investors} | Цена: ${fmt(co.last_price || cryptoFairPrice(co))}</div>
+              </div>
+            `).join("") : '<div class="text-center py-10 card"><i class="fa-regular fa-coins text-4xl text-darkMuted mb-3"></i><p>Ещё нет токенов</p></div>'}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function openCreateCrypto(){
+    openModal(`
+      <div class="space-y-4">
+        <h2 class="text-xl font-bold mb-2">Создание токена</h2>
+        <p class="text-sm text-red-400">Не пишите ничего плохого. Мы не несем ответственности. Мы за традиционные ценности.</p>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium mb-1">Название</label>
+            <input id="coin_name" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3" placeholder="Dino Coin">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Тикер</label>
+            <input id="coin_ticker" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3" placeholder="DNX" maxlength="6">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Фото (загрузка)</label>
+          <input id="coin_photo" type="file" accept="image/*" class="hidden">
+          <button onclick="document.getElementById('coin_photo').click()" class="px-4 py-2 rounded-xl bg-darkPrimary text-white">Загрузить фото</button>
+          <div id="coin_photo_preview" class="mt-2"></div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">Способ создания</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button id="cv_ton" class="crypto-option px-4 py-3 rounded-xl bg-darkBgLight border-2 border-darkPrimary text-darkPrimary font-medium">
+              TON (${ECON.CRYPTO_TON_COST})
+            </button>
+            <button id="cv_stars" class="crypto-option px-4 py-3 rounded-xl bg-darkBgLight border-2 border-indigo-400 text-indigo-300 font-medium">
+              Stars (${ECON.CRYPTO_STARS_COST})
+            </button>
+            <button id="cv_dino" class="crypto-option px-4 py-3 rounded-xl bg-darkBgLight border-2 border-darkSecondary text-darkSecondary font-medium">
+              DINO (мин ${ECON.CRYPTO_DINO_COST_MIN})
+            </button>
+          </div>
+        </div>
+        <div id="invested_input" class="hidden">
+          <label class="block text-sm font-medium mb-1">Вложение</label>
+          <input id="coin_invested" type="number" min="${ECON.CRYPTO_DINO_COST_MIN}" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3" placeholder="Минимум ${ECON.CRYPTO_DINO_COST_MIN}">
+        </div>
+        <button class="w-full py-3 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium mt-2" onclick="createCrypto()">
+          Создать токен
+        </button>
+        <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 mt-3">
+          <div class="flex items-start">
+            <i class="fa-solid fa-triangle-exclamation text-amber-400 mr-2 mt-0.5"></i>
+            <div class="text-xs text-amber-200">Для TON/Stars цена фиксированная, владелец получает 45% от продаж. Для DINO - меняется, весь доход ваш. Выпуск ограничен ${ECON.CRYPTO_SUPPLY_LIMIT}.</div>
+          </div>
+        </div>
+      </div>
+    `);
+
+    let selectedVia = "TON";
+    const buttons = document.querySelectorAll('.crypto-option');
+    const investedInput = document.getElementById("invested_input");
+
+    buttons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        selectedVia = btn.id.replace('cv_', '').toUpperCase();
+        buttons.forEach(b => b.classList.remove('bg-darkPrimary/10', 'bg-indigo-500/10', 'bg-darkSecondary/10'));
+        let bgClass = selectedVia === "TON" ? "bg-darkPrimary/10" : selectedVia === "STARS" ? "bg-indigo-500/10" : "bg-darkSecondary/10";
+        btn.classList.add(bgClass);
+        investedInput.classList.toggle('hidden', selectedVia !== "DINO");
+      });
+    });
+
+    document.getElementById('cv_ton').click();
+
+    document.getElementById('coin_photo').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          document.getElementById('coin_photo_preview').innerHTML = `<img src="${ev.target.result}" class="w-16 h-16 rounded-full">`;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  async function createCrypto(){
+    const name = document.getElementById("coin_name").value.trim();
+    const ticker = document.getElementById("coin_ticker").value.trim().toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6);
+    const photoFile = document.getElementById("coin_photo").files[0];
+    let photo = "";
+    let via = ['TON', 'STARS', 'DINO'].find(v => document.getElementById(`cv_${v.toLowerCase()}`).classList.contains('bg-darkPrimary/10') || document.getElementById(`cv_${v.toLowerCase()}`).classList.contains('bg-indigo-500/10') || document.getElementById(`cv_${v.toLowerCase()}`).classList.contains('bg-darkSecondary/10'));
+    let invested, currency, fixed, price, initial_price;
+    if (via === 'TON') {
+      invested = ECON.CRYPTO_TON_COST;
+      if (state.user.ton < invested) return toast("Не хватает TON", "error");
+      currency = "TON";
+      fixed = true;
+      price = ECON.CRYPTO_TON_FIXED_PRICE;
+      initial_price = price;
+    } else if (via === 'STARS') {
+      invested = ECON.CRYPTO_STARS_COST;
+      if (state.user.stars < invested) return toast("Не хватает ⭐", "error");
+      currency = "STARS";
+      fixed = true;
+      price = ECON.CRYPTO_STARS_FIXED_PRICE;
+      initial_price = price;
+    } else {
+      invested = parseFloat(document.getElementById("coin_invested").value || "0");
+      if (invested < ECON.CRYPTO_DINO_COST_MIN) return toast("Минимальное вложение 50", "error");
+      if (state.user.balance < invested) return toast("Не хватает DINO", "error");
+      currency = "DINO";
+      fixed = false;
+      price = invested / ECON.CRYPTO_SUPPLY_LIMIT;
+      initial_price = price;
+    }
+    const dps_rate = price / ECON.CRYPTO_DPS_RATE_DIVISOR;
+
+    if (!name || !ticker) return toast("Заполните название и тикер", "error");
+
+    if (photoFile) {
+      photo = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(photoFile);
+      });
+    }
+
+    await apiRequest('/cryptos', 'POST', { creator_id: state.currentUserId, name, ticker, photo, currency, fixed, price, dps_rate, initial_price });
+    await fetchAllData();
+    updateHeader();
+    closeModal();
+    renderBusiness();
+    renderIfTab("investments", renderInvestments);
+    toast("Токен создан!");
+  }
+
+  function openCryptoDetails(id) {
+    const co = state.cryptos.find(x => x.id === parseInt(id));
+    if (!co) return;
+    const price = co.last_price ?? cryptoFairPrice(co);
+    const ref = `https://t.me/YOUR_GAME_BOT?start=ref-coin-${co.id}`;
+    const canEmit = ECON.CRYPTO_SUPPLY_LIMIT - co.total_supply;
+    openModal(`
+      <div class="space-y-4">
+        <h2 class="font-bold text-xl mb-1">${co.name} (${co.ticker})</h2>
+        <p class="text-sm text-darkMuted">Создано через: ${co.currency}</p>
+        ${co.photo ? `<img src="${co.photo}" class="w-16 h-16 rounded-full mx-auto">` : ''}
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div class="bg-darkBgLight rounded-xl p-3">
+            <div class="text-darkMuted text-sm mb-1">Цена</div>
+            <div class="font-semibold text-lg text-darkPrimary">${fmt(price)} ${co.currency}</div>
+          </div>
+          <div class="bg-darkBgLight rounded-xl p-3">
+            <div class="text-darkMuted text-sm mb-1">Инвесторов</div>
+            <div class="font-semibold text-lg">${co.investors}</div>
+          </div>
+          <div class="bg-darkBgLight rounded-xl p-3">
+            <div class="text-darkMuted text-sm mb-1">Общий выпуск</div>
+            <div class="font-semibold text-lg">${co.total_supply}</div>
+          </div>
+          <div class="bg-darkBgLight rounded-xl p-3">
+            <div class="text-darkMuted text-sm mb-1">Доступно к выпуску</div>
+            <div class="font-semibold text-lg">${canEmit}</div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between bg-darkBgLight rounded-xl p-3 mb-4">
+          <div class="text-sm truncate"><span class="text-darkMuted">Реф. ссылка: </span><span>${ref}</span></div>
+          <button class="px-3 py-1.5 rounded-lg bg-darkPrimary/20 hover:bg-darkPrimary/30 text-sm" onclick="copyText('${ref}')">
+            <i class="fa-regular fa-copy mr-1"></i>Копировать
+          </button>
+        </div>
+        <div class="bg-darkBgLight rounded-xl p-3">
+          <div class="font-semibold mb-2 flex items-center"><i class="fa-solid fa-coins mr-2 text-darkSecondary"></i>Эмиссия токенов</div>
+          <div class="text-xs text-darkMuted mb-2">Доступно: ${canEmit}</div>
+          <div class="flex items-center gap-2">
+            <input id="emi_crypto_${co.id}" type="number" min="1" class="flex-1 bg-darkCard border border-darkBorder rounded-lg px-3 py-2" placeholder="Количество">
+            <button class="px-3 py-2 rounded-lg bg-darkPrimary hover:bg-darkPrimaryHover text-white" onclick="emitCrypto('${co.id}')">
+              Выпустить
+            </button>
+          </div>
+          <div class="text-xs text-darkSecondary mt-1">Стоимость: ${ECON.EMISSION_COST_PER_SHARE} DINO/токен</div>
+        </div>
+        <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+          <div class="flex items-start">
+            <i class="fa-solid fa-triangle-exclamation text-amber-400 mr-2 mt-0.5"></i>
+            <div class="text-xs text-amber-200">Внимание: криптовалютные инвестиции сопряжены с высоким риском.</div>
+          </div>
+        </div>
+        <button class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium mt-4" onclick="confirmDeleteCrypto('${co.id}')">
+          Удалить крипту
+        </button>
+      </div>
+    `);
+  }
+
+  function confirmDeleteCrypto(id, stage=1) {
+    const msg = stage === 1 ? "Вы уверены?" : "Подтвердите ещё раз.";
+    openModal(`
+      <div class="space-y-4">
+        <h2 class="text-xl font-bold">Удаление крипты</h2>
+        <p>${msg}</p>
+        <button class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white" onclick="${stage === 1 ? `confirmDeleteCrypto('${id}', 2)` : `deleteCrypto('${id}')`}">
+          Да, удалить
+        </button>
+        <button class="w-full py-3 rounded-xl bg-darkBgLight" onclick="closeModal()">Отмена</button>
+      </div>
+    `);
+  }
+
+  async function deleteCrypto(id) {
+    await apiRequest('/delete-crypto', 'POST', { crypto_id: id });
+    closeModal();
+    await fetchAllData();
+    renderBusiness();
+    renderInvestments();
+    toast("Крипта удалена");
+  }
+
+  async function emitCrypto(id){
+    const co = state.cryptos.find(x=>x.id===parseInt(id)); if (!co) return;
+    const input = document.getElementById("emi_crypto_"+id);
+    let n = parseFloat(input.value || "0");
+    if (!n || n < 1) return toast("Введите количество", "error");
+    const can = ECON.CRYPTO_SUPPLY_LIMIT - co.total_supply;
+    n = clamp(n, 0, can);
+    if (n <= 0) return toast("Нет доступной эмиссии", "error");
+    const cost = n * ECON.EMISSION_COST_PER_SHARE;
+    if (state.user.balance < cost) return toast("Не хватает DINO", "error");
+    await apiRequest('/emit-crypto', 'POST', { crypto_id: id, amount: n, cost });
+    await fetchAllData();
+    closeModal();
+    openCryptoDetails(id);
+    renderIfTab("investments", renderInvestments);
+    toast(`Выпущено ${n} токенов (-${fmt(cost)} DINO)`);
+  }
+
+  function referralsPanelHTML() {
+    const refLink = `https://t.me/YOUR_GAME_BOT?start=ref-game-${state.currentUserId}`;
+    return `
+      <div class="space-y-5">
+        <div class="card p-5">
+          <h3 class="font-semibold text-lg mb-4">Реферальная система</h3>
+          <p class="text-sm text-darkMuted mb-4">Приглашайте друзей и получайте ${fmt(ECON.REF_REWARD)} DINO за каждого!</p>
+          <div class="flex items-center justify-between bg-darkBgLight rounded-xl p-3 mb-4">
+            <div class="text-sm truncate"><span class="text-darkMuted">Ваша реф. ссылка: </span><span>${refLink}</span></div>
+            <button class="px-3 py-1.5 rounded-lg bg-darkPrimary/20 hover:bg-darkPrimary/30 text-sm" onclick="copyText('${refLink}')">
+              <i class="fa-regular fa-copy mr-1"></i>Копировать
+            </button>
+          </div>
+          <div class="bg-darkBgLight rounded-xl p-3 mb-4">
+            <div class="text-darkMuted text-sm mb-1">Подпишись на наш канал</div>
+            <a href="YOUR_CHANNEL_LINK" class="text-darkPrimary">Чтобы быть в курсе всех событий</a>
+          </div>
+          <div class="bg-darkBgLight rounded-xl p-3">
+            <div class="text-darkMuted text-sm mb-1">Приглашено</div>
+            <div class="font-semibold text-lg">${state.user.referrals}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /*********************
+   * Investments
+   *********************/
+  let invTab = "stocks";
+
+  function renderInvestments(){
+    $content().innerHTML = `
+      <section class="space-y-5">
+        <div class="card p-2">
+          <div class="grid grid-cols-3 gap-2">
+            <button class="tab-btn ${invTab==='stocks'?'active':''} rounded-xl py-3 font-medium" onclick="setInvTab('stocks')">
+              <i class="fa-solid fa-chart-line mr-2"></i>Акции
+            </button>
+            <button class="tab-btn ${invTab==='crypto'?'active':''} rounded-xl py-3 font-medium" onclick="setInvTab('crypto')">
+              <i class="fa-solid fa-coins mr-2"></i>Крипта
+            </button>
+            <button class="tab-btn ${invTab==='wallet'?'active':''} rounded-xl py-3 font-medium" onclick="setInvTab('wallet')">
+              <i class="fa-solid fa-wallet mr-2"></i>Кошелёк
+            </button>
+          </div>
+        </div>
+
+        ${invTab==='stocks' ? stocksMarketHTML() : invTab==='crypto' ? cryptoMarketHTML() : walletHTML()}
+      </section>
+    `;
+    if (invTab === 'stocks' || invTab === 'crypto') {
+      document.getElementById('search-inv').addEventListener('input', (e) => filterInv(e.target.value, invTab));
+    }
+  }
+
+  function setInvTab(t){ invTab=t; renderInvestments(); }
+
+  function filterInv(query, tab) {
+    query = query.toLowerCase();
+    const cards = document.querySelectorAll('.card.p-5');
+    cards.forEach(card => {
+      const title = card.querySelector('.font-bold.text-lg')?.textContent.toLowerCase() || '';
+      card.style.display = title.includes(query) ? '' : 'none';
+    });
+  }
+
+  function stocksMarketHTML(){
+    const filteredCompanies = state.companies;
+    if (!filteredCompanies.length) return `<div class="card p-5 text-center py-10"><i class="fa-regular fa-building text-4xl text-darkMuted mb-3"></i><p>Нет компаний на рынке</p></div>`;
+    return `
+      <div class="space-y-4">
+        <input id="search-inv" type="text" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3" placeholder="Поиск по имени или тикеру">
+        ${filteredCompanies.map(c=>{
+          const price = c.last_price ?? stockFairPrice(c);
+          const avail = c.total_issued - c.sold_shares;
+          const holding = state.wallet.stocks[c.id]?.shares || 0;
+          const isOwn = c.owner_id === state.currentUserId;
+          const ownClass = isOwn ? 'border-darkSecondary border-2' : '';
+          const ownText = isOwn ? '<span class="pill ml-2">Ваш бизнес</span>' : '';
+
+          return `
+            <div class="card p-5 ${ownClass}">
+              <div class="flex items-center justify-between mb-4">
+                <div class="font-semibold">${c.name} (${c.ticker})${ownText}</div>
+                <div class="text-lg font-bold text-darkPrimary">Цена: ${fmt(price)}</div>
+              </div>
+              <div class="grid grid-cols-3 gap-3 mb-4 text-sm">
+                <div class="bg-darkBgLight rounded-xl p-3">
+                  <div class="text-darkMuted mb-1">Клиенты</div>
+                  <div class="font-semibold">${c.clients}</div>
+                </div>
+                <div class="bg-darkBgLight rounded-xl p-3">
+                  <div class="text-darkMuted mb-1">Доступно</div>
+                  <div class="font-semibold">${avail}</div>
+                </div>
+                <div class="bg-darkBgLight rounded-xl p-3">
+                  <div class="text-darkMuted mb-1">Ваши акции</div>
+                  <div class="font-semibold">${holding}</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <input id="buy_${c.id}" type="number" min="1" class="flex-1 bg-darkBgLight border border-darkBorder rounded-xl px-3 py-2" placeholder="Количество">
+                <button class="px-4 py-2.5 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white" onclick="buyStock('${c.id}')">
+                  Купить
+                </button>
+                ${holding > 0 ? `
+                <button class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white" onclick="sellStock('${c.id}')">
+                  Продать
+                </button>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  async function buyStock(id){
+    const c = state.companies.find(x=>x.id===parseInt(id)); if (!c) return;
+    let qty = parseInt(document.getElementById("buy_"+id).value||"0");
+    if (!qty || qty<1) return toast("Введите количество", "error");
+    const avail = c.total_issued - c.sold_shares;
+    qty = clamp(qty, 1, avail);
+    const price = c.last_price ?? stockFairPrice(c);
+    const cost = qty * price;
+    if (state.user.balance < cost) return toast("Не хватает DINO", "error");
+
+    await apiRequest('/buy', 'POST', { user_id: state.currentUserId, asset_type: 'company', asset_id: id, amount: qty });
+    state.user.xp += qty;
+    updateLevel();
+    await fetchAllData();
+    updateHeader();
+    renderInvestments();
+    renderIfTab("business", renderBusiness);
+    toast(`Куплено ${qty} акций ${c.ticker}`);
+  }
+
+  async function sellStock(id){
+    const c = state.companies.find(x=>x.id===parseInt(id)); if (!c) return;
+    const w = state.wallet.stocks[id];
+    if (!w || w.shares<=0) return;
+    const qty = w.shares;
+    await apiRequest('/sell', 'POST', { user_id: state.currentUserId, asset_type: 'company', asset_id: id, amount: qty });
+    await fetchAllData();
+    updateHeader();
+    renderInvestments();
+    renderIfTab("business", renderBusiness);
+    toast(`Продано ${qty} акций ${c.ticker}`);
+  }
+
+  function cryptoMarketHTML(){
+    const filteredCryptos = state.cryptos;
+    if (!filteredCryptos.length) return `<div class="card p-5 text-center py-10"><i class="fa-regular fa-coins text-4xl text-darkMuted mb-3"></i><p>Нет токенов на рынке</p></div>`;
+    return `
+      <div class="space-y-4">
+        <input id="search-inv" type="text" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3" placeholder="Поиск по имени или тикеру">
+        ${filteredCryptos.map(co=>{
+          const price = co.last_price ?? cryptoFairPrice(co);
+          const holding = state.wallet.crypto[co.id]?.amount || 0;
+          const isOwn = co.creator_id === state.currentUserId;
+          const ownClass = isOwn ? 'border-darkSecondary border-2' : '';
+          const ownText = isOwn ? '<span class="pill ml-2">Ваша крипта</span>' : '';
+          const dpsText = `<div class="text-sm text-darkPrimary mt-2">Доход: ${fmt(co.dps_rate)} DINO/сек за единицу</div>`;
+
+          return `
+            <div class="card p-5 ${ownClass}">
+              <div class="flex items-center justify-between mb-4">
+                <div class="font-semibold">${co.name} (${co.ticker})${ownText}</div>
+                <div class="text-lg font-bold text-darkPrimary">Цена: ${fmt(price)} ${co.currency}</div>
+              </div>
+              <div class="grid grid-cols-3 gap-3 mb-4 text-sm">
+                <div class="bg-darkBgLight rounded-xl p-3">
+                  <div class="text-darkMuted mb-1">Инвесторов</div>
+                  <div class="font-semibold">${co.investors}</div>
+                </div>
+                <div class="bg-darkBgLight rounded-xl p-3">
+                  <div class="text-darkMuted mb-1">Ваши токены</div>
+                  <div class="font-semibold">${fmt(holding, 4)}</div>
+                </div>
+                <div class="bg-darkBgLight rounded-xl p-3">
+                  <div class="text-darkMuted mb-1">Риск</div>
+                  <div class="font-semibold text-darkSecondary">Высокий</div>
+                </div>
+              </div>
+              ${dpsText}
+              <div class="flex items-center gap-2 mt-2">
+                <input id="cbuy_${co.id}" type="number" min="0.0001" step="0.0001" class="flex-1 bg-darkBgLight border border-darkBorder rounded-xl px-3 py-2" placeholder="Количество">
+                <button class="px-4 py-2.5 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white" onclick="buyCrypto('${co.id}')">
+                  Купить
+                </button>
+                ${holding>0 && co.currency === "DINO" ? `
+                <button class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white" onclick="sellCrypto('${co.id}')">
+                  Продать
+                </button>
+                ` : ''}
+              </div>
+              <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 mt-4">
+                <div class="flex items-start">
+                  <i class="fa-solid fa-triangle-exclamation text-amber-400 mr-2 mt-0.5"></i>
+                  <div class="text-xs text-amber-200">Цена может меняться для DINO-крипты. Вы можете потерять средства.</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  async function buyCrypto(id){
+    const co = state.cryptos.find(x=>x.id===parseInt(id)); if (!co) return;
+    let amount = parseFloat(document.getElementById("cbuy_"+id).value||"0");
+    if (!amount || amount<=0) return toast("Введите количество", "error");
+    const price = co.last_price ?? cryptoFairPrice(co);
+    const cost = amount * price;
+    const currencyField = co.currency.toLowerCase();
+    if (state.user[currencyField] < cost) return toast(`Не хватает ${co.currency}`, "error");
+    if (co.currency !== 'DINO') showNoSellWarn();
+
+    await apiRequest('/buy', 'POST', { user_id: state.currentUserId, asset_type: 'crypto', asset_id: id, amount });
+    state.user.xp += amount;
+    updateLevel();
+    await fetchAllData();
+    updateHeader();
+    renderInvestments();
+    toast("Покупка успешна");
+  }
+
+  async function sellCrypto(id){
+    const co = state.cryptos.find(x=>x.id===parseInt(id)); if (!co) return;
+    const w = state.wallet.crypto[id]; if (!w || w.amount<=0) return;
+    if (co.currency !== "DINO") return toast("Нельзя продавать", "error");
+    await apiRequest('/sell', 'POST', { user_id: state.currentUserId, asset_type: 'crypto', asset_id: id, amount: w.amount });
+    await fetchAllData();
+    updateHeader();
+    renderInvestments();
+    toast("Продано");
+  }
+
+  function walletHTML(){
+    const stockRows = Object.entries(state.wallet.stocks).map(([id,pos])=>{
+      const c = state.companies.find(x=>x.id===parseInt(id));
+      if (!c) return "";
+      const price = c.last_price ?? stockFairPrice(c);
+      const pnl = (price - pos.avgPrice) * pos.shares;
+      const pnlPercent = pos.avgPrice > 0 ? ((price - pos.avgPrice) / pos.avgPrice) * 100 : 0;
+      const sellBtn = pos.currency === "DINO" ? `<button class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white mt-2" onclick="sellStock('${id}')">Продать</button>` : '';
+
+      return `
+        <div class="bg-darkBgLight rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="font-semibold">${c.ticker}</div>
+            <div class="text-sm text-darkMuted">${c.name}</div>
+          </div>
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <div class="text-darkMuted">Количество</div>
+              <div class="font-semibold">${pos.shares}</div>
+            </div>
+            <div>
+              <div class="text-darkMuted">Средняя цена</div>
+              <div class="font-semibold">${fmt(pos.avgPrice)}</div>
+            </div>
+            <div>
+              <div class="text-darkMuted">Текущая цена</div>
+              <div class="font-semibold">${fmt(price)}</div>
+            </div>
+            <div>
+              <div class="text-darkMuted">P/L</div>
+              <div class="font-semibold ${pnl>=0?'text-emerald-400':'text-red-400'}">
+                ${fmt(pnl)} (${fmt(pnlPercent)}%)
+              </div>
+            </div>
+          </div>
+          ${sellBtn}
+        </div>
+      `;
+    }).join("");
+
+    const cryptoRows = Object.entries(state.wallet.crypto).map(([id,pos])=>{
+      const co = state.cryptos.find(x=>x.id===parseInt(id));
+      if (!co) return "";
+      const price = co.last_price ?? cryptoFairPrice(co);
+      const pnl = (price - pos.avgPrice) * pos.amount;
+      const pnlPercent = pos.avgPrice > 0 ? ((price - pos.avgPrice) / pos.avgPrice) * 100 : 0;
+      const sellBtn = pos.currency === "DINO" ? `<button class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white mt-2" onclick="sellCrypto('${id}')">Продать</button>` : '';
+
+      return `
+        <div class="bg-darkBgLight rounded-xl p-4 mt-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="font-semibold">${co.ticker}</div>
+            <div class="text-sm text-darkMuted">${co.name}</div>
+          </div>
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <div class="text-darkMuted">Количество</div>
+              <div class="font-semibold">${fmt(pos.amount, 4)}</div>
+            </div>
+            <div>
+              <div class="text-darkMuted">Средняя цена</div>
+              <div class="font-semibold">${fmt(pos.avgPrice)}</div>
+            </div>
+            <div>
+              <div class="text-darkMuted">Текущая цена</div>
+              <div class="font-semibold">${fmt(price)}</div>
+            </div>
+            <div>
+              <div class="text-darkMuted">P/L</div>
+              <div class="font-semibold ${pnl>=0?'text-emerald-400':'text-red-400'}">
+                ${fmt(pnl)} (${fmt(pnlPercent)}%)
+              </div>
+            </div>
+          </div>
+          ${sellBtn}
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <div class="space-y-5">
+        <div class="card p-5">
+          <h3 class="font-semibold text-lg mb-4">Акции</h3>
+          ${stockRows || "Нет акций в портфеле"}
+        </div>
+
+        <div class="card p-5">
+          <h3 class="font-semibold text-lg mb-4">Криптовалюта</h3>
+          ${cryptoRows || "Нет крипты в портфеле"}
+        </div>
+      </div>
+    `;
+  }
+
+  /*********************
+   * Profile
+   *********************/
+  function renderProfile() {
+    const messagesToMe = state.messages;
+    const messagesHTML = messagesToMe.map(m => {
+      const fromUser = state.users.find(u => u.id === m.from_id);
+      return `
+        <div class="bg-darkBgLight rounded-xl p-3 mb-2">
+          <div class="font-semibold text-sm">${fromUser ? fromUser.name : "Неизвестный"}:</div>
+          <div class="text-sm">${escapeHtml(m.text)}</div>
+        </div>
+      `;
+    }).join("") || "Нет сообщений";
+
+    const ownedCompanies = state.companies.filter(c => c.owner_id === state.currentUserId).map(c => `<div class="flex items-center"><i class="fa-solid fa-building mr-2 text-darkPrimary"></i>${c.name}</div>`).join("");
+    const ownedCryptos = state.cryptos.filter(co => co.creator_id === state.currentUserId).map(co => `<div class="flex items-center"><i class="fa-solid fa-coins mr-2 text-darkPrimary"></i>${co.name}</div>`).join("");
+    const ownedHTML = [ownedCompanies, ownedCryptos].filter(t => t).join("") || "Ничего";
+
+    $content().innerHTML = `
+      <section class="space-y-6">
+        <div class="card p-5">
+          <div class="flex items-center gap-4 mb-4">
+            <img src="${state.user.avatar}" class="w-16 h-16 rounded-full border-2 border-darkPrimary">
+            <div>
+              <h2 class="font-bold text-xl">${state.user.name}</h2>
+              <p class="text-sm text-darkMuted">@${state.user.username}</p>
+            </div>
+          </div>
+          <p class="text-sm mb-4">${state.user.bio}</p>
+          ${state.user.telegram_channel ? `<p class="text-sm text-darkPrimary">Telegram: ${state.user.telegram_channel}</p>` : ''}
+          <button class="w-full py-3 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium" onclick="openEditProfile()">
+            Редактировать профиль
+          </button>
+        </div>
+
+        <div class="card p-5">
+          <h3 class="font-semibold mb-4">Владелец</h3>
+          <div class="space-y-2 text-sm">${ownedHTML}</div>
+        </div>
+
+        <div class="card p-5">
+          <h3 class="font-semibold mb-4">Настройки</h3>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span>Тема</span>
+              <button class="px-4 py-2 rounded-xl bg-darkBgLight border border-darkBorder flex items-center" onclick="toggleTheme()">
+                <i class="fa-solid fa-${state.theme === 'dark' ? 'moon' : 'sun'} mr-2"></i>${state.theme === 'dark' ? 'Тёмная' : 'Светлая'}
+              </button>
+            </div>
+            <div class="flex items-center justify-between">
+              <span>Показывать username в ДиноНет</span>
+              <button class="px-4 py-2 rounded-xl bg-darkBgLight border border-darkBorder" onclick="toggleShowUsername()">
+                ${state.user.show_username ? 'Да' : 'Нет'}
+              </button>
+            </div>
+            <div class="flex items-center justify-between">
+              <span>Уровень</span>
+              <span class="font-bold">${state.user.level}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span>XP</span>
+              <span class="font-bold">${fmt(state.user.xp)} / ${state.user.xp_next}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card p-5">
+          <h3 class="font-semibold mb-4">Сообщения</h3>
+          <div class="space-y-2">${messagesHTML}</div>
+        </div>
+      </section>
+    `;
+  }
+
+  async function toggleShowUsername() {
+    state.user.show_username = !state.user.show_username;
+    await updateUserField('show_username', state.user.show_username);
+    renderProfile();
+  }
+
+  function openEditProfile(){
+    openModal(`
+      <div class="space-y-4">
+        <h2 class="text-xl font-bold mb-2">Редактировать профиль</h2>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium mb-1">Имя</label>
+            <input id="edit_name" value="${state.user.name}" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Био</label>
+            <textarea id="edit_bio" rows="3" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3">${state.user.bio}</textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Telegram канал</label>
+            <input id="edit_tg" value="${state.user.telegram_channel}" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3" placeholder="@channel">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Аватар</label>
+            <input id="edit_avatar" type="file" accept="image/*" class="hidden">
+            <button onclick="document.getElementById('edit_avatar').click()" class="px-4 py-2 rounded-xl bg-darkPrimary text-white">Загрузить аватар</button>
+            <div id="edit_avatar_preview" class="mt-2"><img src="${state.user.avatar}" class="w-16 h-16 rounded-full"></div>
+          </div>
+        </div>
+        <button class="w-full py-3 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium mt-2" onclick="saveProfile()">
+          Сохранить
+        </button>
+      </div>
+    `);
+
+    document.getElementById('edit_avatar').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          document.getElementById('edit_avatar_preview').innerHTML = `<img src="${ev.target.result}" class="w-16 h-16 rounded-full">`;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  async function saveProfile(){
+    let avatar = state.user.avatar;
+    const photoFile = document.getElementById("edit_avatar").files[0];
+    if (photoFile) {
+      avatar = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(photoFile);
+      });
+    }
+    const name = document.getElementById("edit_name").value.trim();
+    const bio = document.getElementById("edit_bio").value.trim();
+    const telegram_channel = document.getElementById("edit_tg").value.trim();
+    await apiRequest('/update-profile', 'POST', { user_id: state.currentUserId, name, bio, telegram_channel, avatar });
+    await fetchAllData();
+    closeModal();
+    renderProfile();
+    updateHeader();
+    toast("Профиль обновлён");
+  }
+
+  function openProfile(userId) {
+    const user = state.users.find(u => u.id === parseInt(userId));
+    if (!user) return;
+    const ownedCompanies = state.companies.filter(c => c.owner_id === userId).map(c => c.name).join(", ");
+    const ownedCryptos = state.cryptos.filter(co => co.creator_id === userId).map(co => co.name).join(", ");
+    const ownedText = [ownedCompanies, ownedCryptos].filter(t => t).join(", ") || "Ничего";
+    const telegramHTML = user.telegram_channel ? `<p class="text-sm text-darkPrimary">Telegram: ${user.telegram_channel}</p>` : '';
+    const usernameHTML = user.show_username ? `@${user.username}` : '';
+
+    openModal(`
+      <div class="space-y-4">
+        <div class="flex items-center gap-4 mb-4">
+          <img src="${user.avatar}" class="w-16 h-16 rounded-full border-2 border-darkPrimary">
+          <div>
+            <h2 class="font-bold text-xl">${user.name}</h2>
+            <p class="text-sm text-darkMuted">${usernameHTML}</p>
+          </div>
+        </div>
+        <p class="text-sm mb-4">${user.bio}</p>
+        ${telegramHTML}
+        <div class="text-sm text-darkPrimary mt-2">Владелец: ${ownedText}</div>
+        <button class="w-full py-3 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium" onclick="openSendMessage('${userId}')">
+          Написать сообщение
+        </button>
+      </div>
+    `);
+  }
+
+  function openSendMessage(toId) {
+    openModal(`
+      <div class="space-y-4">
+        <h2 class="text-xl font-bold mb-2">Отправить сообщение</h2>
+        <textarea id="message-text" rows="4" class="w-full bg-darkBgLight border border-darkBorder rounded-xl p-3 outline-none resize-none" placeholder="Ваше сообщение..."></textarea>
+        <button class="w-full py-3 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium" onclick="sendMessage('${toId}')">
+          Отправить
+        </button>
+      </div>
+    `);
+  }
+
+  async function sendMessage(toId) {
+    const text = document.getElementById("message-text").value.trim();
+    if (!text) return toast("Пустое сообщение", "error");
+    await apiRequest('/messages', 'POST', { from_id: state.currentUserId, to_id: parseInt(toId), text });
+    closeModal();
+    await fetchAllData();
+    toast("Сообщение отправлено");
+  }
+
+  /*********************
+   * Init
+   *********************/
+  async function init() {
+    if (window.Telegram && Telegram.WebApp) {
+      const tgUser = Telegram.WebApp.initDataUnsafe.user;
+      if (tgUser) {
+        state.tgId = tgUser.id;
+        let user = await fetchUser(state.tgId);
+        if (!user) {
+          user = await registerUser(tgUser);
         }
-
-        // Initialize platforms, obstacles, bitcoins, and multipliers
-        function initPlatforms() {
-            platforms = [];
-            obstacles = [];
-            bitcoins = [];
-            multiplierItems = [];
-
-            // Starting platform
-            platforms.push({
-                x: window.innerWidth / 2 - platformWidth / 2,
-                y: window.innerHeight - 50,
-                width: platformWidth,
-                height: platformHeight
-            });
-
-            // Generate platforms
-            for (let i = 1; i < 50; i++) {
-                const prevPlatform = platforms[platforms.length - 1];
-                const maxXOffset = window.innerWidth * 0.4;
-                const randomX = prevPlatform.x + (Math.random() - 0.5) * maxXOffset;
-                const clampedX = Math.max(0, Math.min(randomX, window.innerWidth - platformWidth));
-
-                platforms.push({
-                    x: clampedX,
-                    y: prevPlatform.y - platformSpacing - Math.random() * 20,
-                    width: platformWidth,
-                    height: platformHeight
-                });
-
-                // Add bitcoins with 50% probability
-                if (Math.random() < 0.5) {
-                    const platform = platforms[platforms.length - 1];
-                    bitcoins.push({
-                        x: platform.x + Math.random() * platform.width,
-                        y: platform.y - 40,
-                        radius: 15,
-                        value: +(Math.random() * 2 + 0.1).toFixed(2),
-                        collected: false,
-                        rotation: 0,
-                        bounce: 0
-                    });
-                }
-
-                // Add multipliers with 33% probability
-                if (Math.random() < 0.33) {
-                    const platform = platforms[platforms.length - 1];
-                    const multiplierValues = [1.5, 2.0, 2.5, 3.0, 5.0];
-                    multiplierItems.push({
-                        x: platform.x + Math.random() * platform.width,
-                        y: platform.y - 50,
-                        radius: 18,
-                        value: multiplierValues[Math.floor(Math.random() * multiplierValues.length)],
-                        collected: false,
-                        rotation: 0,
-                        pulse: 0
-                    });
-                }
-
-                // Add obstacles (spikes) with 20% probability
-                if (Math.random() < 0.2) {
-                    const platform = platforms[platforms.length - 1];
-                    obstacles.push({
-                        x: platform.x + Math.random() * (platform.width - obstacleSize),
-                        y: platform.y - obstacleSize,
-                        width: obstacleSize,
-                        height: obstacleSize,
-                        platform: platform
-                    });
-                }
-            }
-        }
-
-        // Show multiplier popup
-        function showMultiplierPopup(x, y, value) {
-            const popup = document.createElement('div');
-            popup.className = 'multiplier-popup';
-            popup.style.left = x + 'px';
-            popup.style.top = y + 'px';
-            popup.textContent = `${value}X`;
-            document.body.appendChild(popup);
-
-            setTimeout(() => {
-                if (popup.parentNode) {
-                    popup.parentNode.removeChild(popup);
-                }
-            }, 1000);
-        }
-
-        // Create particles (reduced number for performance)
-        function createParticle(x, y, color) {
-            for (let i = 0; i < 5; i++) { // Reduced from 10 to 5
-                particles.push({
-                    x: x,
-                    y: y,
-                    vx: (Math.random() - 0.5) * 8,
-                    vy: (Math.random() - 0.5) * 8,
-                    life: 1,
-                    color: color
-                });
-            }
-        }
-
-        // Update particles
-        function updateParticles() {
-            particles = particles.filter(particle => {
-                particle.x += particle.vx;
-                particle.y += particle.vy;
-                particle.vy += 0.15;
-                particle.life -= 0.025;
-                return particle.life > 0;
-            });
-        }
-
-        // Draw multipliers
-        function drawMultipliers() {
-            multiplierItems.forEach(item => {
-                if (!item.collected) {
-                    const screenY = item.y - camera.y;
-                    if (screenY > -50 && screenY < window.innerHeight + 50) {
-                        item.rotation += 0.02;
-                        item.pulse = Math.sin(Date.now() * 0.005) * 0.2 + 1;
-
-                        ctx.save();
-                        ctx.translate(item.x, screenY);
-                        ctx.rotate(item.rotation);
-                        ctx.scale(item.pulse, item.pulse);
-
-                        const glowGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, item.radius * 2);
-                        glowGradient.addColorStop(0, 'rgba(255, 0, 255, 0.6)');
-                        glowGradient.addColorStop(0.5, 'rgba(255, 100, 255, 0.3)');
-                        glowGradient.addColorStop(1, 'rgba(255, 0, 255, 0)');
-                        ctx.fillStyle = glowGradient;
-                        ctx.beginPath();
-                        ctx.arc(0, 0, item.radius * 2, 0, Math.PI * 2);
-                        ctx.fill();
-
-                        const mainGradient = ctx.createRadialGradient(-5, -5, 0, 0, 0, item.radius);
-                        mainGradient.addColorStop(0, '#ff66ff');
-                        mainGradient.addColorStop(0.7, '#cc00cc');
-                        mainGradient.addColorStop(1, '#990099');
-
-                        ctx.fillStyle = mainGradient;
-                        ctx.beginPath();
-                        ctx.arc(0, 0, item.radius, 0, Math.PI * 2);
-                        ctx.fill();
-
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 14px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(`${item.value}X`, 0, 5);
-
-                        ctx.restore();
-                    }
-                }
-            });
-        }
-
-        function drawParticles() {
-            particles.forEach(particle => {
-                ctx.save();
-                ctx.globalAlpha = particle.life;
-                ctx.fillStyle = particle.color;
-                ctx.beginPath();
-                ctx.arc(particle.x, particle.y - camera.y, 2, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-            });
-        }
-
-        // Draw player
-        function drawPlayer() {
-            const screenY = player.y - camera.y;
-
-            player.glowIntensity = Math.sin(Date.now() * 0.008) * 0.2 + 0.6;
-
-            ctx.save();
-
-            const gradient = ctx.createRadialGradient(player.x, screenY, 0, player.x, screenY, player.radius * 2.5);
-            gradient.addColorStop(0, `rgba(0, 255, 255, ${player.glowIntensity * 0.6})`);
-            gradient.addColorStop(0.5, `rgba(0, 200, 255, ${player.glowIntensity * 0.3})`);
-            gradient.addColorStop(1, 'rgba(0, 150, 255, 0)');
-
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(player.x, screenY, player.radius * 2.5, 0, Math.PI * 2);
-            ctx.fill();
-
-            const ballGradient = ctx.createRadialGradient(
-                player.x - player.radius * 0.3,
-                screenY - player.radius * 0.3,
-                0,
-                player.x,
-                screenY,
-                player.radius
-            );
-            ballGradient.addColorStop(0, '#ffffff');
-            ballGradient.addColorStop(0.3, '#00ffff');
-            ballGradient.addColorStop(1, '#0080ff');
-
-            ctx.fillStyle = ballGradient;
-            ctx.beginPath();
-            ctx.arc(player.x, screenY, player.radius, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-            ctx.beginPath();
-            ctx.arc(player.x - player.radius * 0.3, screenY - player.radius * 0.3, player.radius * 0.3, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.restore();
-        }
-
-        // Draw platforms
-        function drawPlatforms() {
-            platforms.forEach(platform => {
-                const screenY = platform.y - camera.y;
-                if (screenY > -50 && screenY < window.innerHeight + 50) {
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-                    ctx.fillRect(platform.x + 4, screenY + 4, platform.width, platform.height);
-
-                    const gradient = ctx.createLinearGradient(0, screenY, 0, screenY + platform.height);
-                    gradient.addColorStop(0, '#4a90e2');
-                    gradient.addColorStop(1, '#2c5aa0');
-
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(platform.x, screenY, platform.width, platform.height);
-
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-                    ctx.fillRect(platform.x, screenY, platform.width, 2);
-                }
-            });
-        }
-
-        // Draw obstacles (spikes)
-        function drawObstacles() {
-            obstacles.forEach(obstacle => {
-                const screenY = obstacle.y - camera.y;
-                if (screenY > -50 && screenY < window.innerHeight + 50) {
-                    ctx.fillStyle = '#ff0000';
-                    ctx.beginPath();
-                    ctx.moveTo(obstacle.x, screenY + obstacle.height);
-                    ctx.lineTo(obstacle.x + obstacle.width / 2, screenY);
-                    ctx.lineTo(obstacle.x + obstacle.width, screenY + obstacle.height);
-                    ctx.closePath();
-                    ctx.fill();
-                }
-            });
-        }
-
-        // Draw bitcoins
-        function drawBitcoins() {
-            bitcoins.forEach(bitcoin => {
-                if (!bitcoin.collected) {
-                    const screenY = bitcoin.y - camera.y;
-                    if (screenY > -50 && screenY < window.innerHeight + 50) {
-                        bitcoin.rotation += 0.03;
-                        bitcoin.bounce = Math.sin(Date.now() * 0.004 + bitcoin.x) * 4;
-
-                        const drawY = screenY + bitcoin.bounce;
-
-                        ctx.save();
-                        ctx.translate(bitcoin.x, drawY);
-                        ctx.rotate(bitcoin.rotation);
-
-                        const glowGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, bitcoin.radius * 1.5);
-                        glowGradient.addColorStop(0, 'rgba(247, 147, 26, 0.6)');
-                        glowGradient.addColorStop(1, 'rgba(247, 147, 26, 0)');
-                        ctx.fillStyle = glowGradient;
-                        ctx.beginPath();
-                        ctx.arc(0, 0, bitcoin.radius * 1.5, 0, Math.PI * 2);
-                        ctx.fill();
-
-                        const coinGradient = ctx.createRadialGradient(-3, -3, 0, 0, 0, bitcoin.radius);
-                        coinGradient.addColorStop(0, '#ffdd44');
-                        coinGradient.addColorStop(0.8, '#f7931a');
-                        coinGradient.addColorStop(1, '#cc7a00');
-
-                        ctx.fillStyle = coinGradient;
-                        ctx.beginPath();
-                        ctx.arc(0, 0, bitcoin.radius, 0, Math.PI * 2);
-                        ctx.fill();
-
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 16px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('₿', 0, 5);
-
-                        ctx.restore();
-
-                        // Draw value above the bitcoin
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 12px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'bottom';
-                        ctx.fillText(bitcoin.value.toFixed(2), bitcoin.x, drawY - bitcoin.radius - 5);
-                    }
-                }
-            });
-        }
-
-        // Autopilot logic (improved)
-        function autoPlayLogic() {
-            let targetX = player.x;
-            let shouldJump = false;
-
-            // Prioritize multipliers over bitcoins
-            const items = [...multiplierItems.filter(m => !m.collected), ...bitcoins.filter(b => !b.collected)];
-            let closestItem = null;
-            let minDist = Infinity;
-
-            items.forEach(item => {
-                const dist = Math.hypot(item.x - player.x, item.y - player.y);
-                // Prefer items slightly above or on level, and multipliers get bonus
-                const score = dist - (item.value ? item.value * 10 : 0) + (player.y - item.y) * 0.5;
-                if (score < minDist && item.y <= player.y + 200) {
-                    minDist = score;
-                    closestItem = item;
-                }
-            });
-
-            if (closestItem) {
-                targetX = closestItem.x;
-                // Jump if item is above and reachable, or if falling towards it
-                if (closestItem.y < player.y - player.radius && player.jumpCount < player.maxJumps) {
-                    if (Math.abs(player.x - closestItem.x) < 50 || player.onGround) { // Better jump timing
-                        shouldJump = true;
-                    }
-                }
-            } else {
-                // Find next platform above
-                let nextPlatform = null;
-                let minDY = Infinity;
-
-                platforms.forEach(p => {
-                    const dy = player.y - p.y;
-                    if (dy > 50 && dy < minDY) {
-                        minDY = dy;
-                        nextPlatform = p;
-                    }
-                });
-
-                if (nextPlatform) {
-                    targetX = nextPlatform.x + nextPlatform.width / 2;
-
-                    // Avoid obstacles on the platform
-                    obstacles.forEach(o => {
-                        if (o.platform === nextPlatform) {
-                            const obsCenter = o.x + o.width / 2;
-                            if (Math.abs(targetX - obsCenter) < obstacleSize + player.radius + 10) {
-                                // Shift away from obstacle, prefer side closer to current position
-                                const shift = (player.x > obsCenter) ? obstacleSize + player.radius + 15 : - (obstacleSize + player.radius + 15);
-                                targetX = obsCenter + shift;
-                                targetX = Math.max(nextPlatform.x + player.radius, Math.min(targetX, nextPlatform.x + nextPlatform.width - player.radius));
-                            }
-                        }
-                    });
-
-                    // Jump timing: only if close enough horizontally and not already jumping up
-                    if ((player.onGround || (player.jumpCount < player.maxJumps && player.velocityY >= 0)) && Math.abs(player.x - targetX) < 100) {
-                        shouldJump = true;
-                    }
-                } else {
-                    // If no next platform, stay centered
-                    targetX = window.innerWidth / 2;
-                }
-            }
-
-            // Smooth movement to target
-            const dx = targetX - player.x;
-            player.velocityX += Math.sign(dx) * Math.min(Math.abs(dx) * 0.005, 0.8); // Gradual acceleration
-
-            // Limit speed
-            player.velocityX = Math.max(-5, Math.min(player.velocityX, 5));
-
-            // Execute jump
-            if (shouldJump && player.jumpCount < player.maxJumps) {
-                player.velocityY = jumpPower;
-                player.jumpCount++;
-                createParticle(player.x, player.y, '#00ffff');
-            }
-        }
-
-        // Update game
-        function update() {
-            if (!gameRunning) return;
-
-            if (autoPlay) {
-                autoPlayLogic();
-            } else {
-                // Manual control
-                if ((keys[' '] || keys['click']) && player.jumpCount < player.maxJumps) {
-                    player.velocityY = jumpPower;
-                    player.jumpCount++;
-                    createParticle(player.x, player.y, '#00ffff');
-                }
-
-                const keySpeed = 0.8;
-                if (keys['ArrowLeft'] || keys['a']) {
-                    player.velocityX -= keySpeed;
-                }
-                if (keys['ArrowRight'] || keys['d']) {
-                    player.velocityX += keySpeed;
-                }
-            }
-
-            // Player physics
-            player.velocityY += gravity;
-            player.y += player.velocityY;
-            player.x += player.velocityX;
-            player.velocityX *= 0.92;
-
-            // Screen boundaries
-            if (player.x < player.radius) player.x = player.radius;
-            if (player.x > window.innerWidth - player.radius) player.x = window.innerWidth - player.radius;
-
-            // Platform collisions
-            player.onGround = false;
-            platforms.forEach(platform => {
-                if (player.x > platform.x - player.radius &&
-                    player.x < platform.x + platform.width + player.radius &&
-                    player.y + player.radius > platform.y &&
-                    player.y + player.radius < platform.y + platform.height + 10 &&
-                    player.velocityY >= 0) {
-
-                    player.y = platform.y - player.radius;
-                    player.velocityY = 0;
-                    player.onGround = true;
-                    player.jumpCount = 0;
-                }
-            });
-
-            // Obstacle collisions
-            obstacles.forEach(obstacle => {
-                if (player.x + player.radius > obstacle.x &&
-                    player.x - player.radius < obstacle.x + obstacle.width &&
-                    player.y + player.radius > obstacle.y &&
-                    player.y - player.radius < obstacle.y + obstacle.height) {
-                    gameOver();
-                }
-            });
-
-            // Collect bitcoins
-            bitcoins.forEach(bitcoin => {
-                if (!bitcoin.collected) {
-                    const distance = Math.hypot(player.x - bitcoin.x, player.y - bitcoin.y);
-                    if (distance < player.radius + bitcoin.radius) {
-                        bitcoin.collected = true;
-                        totalBitcoins += bitcoin.value * multiplier;
-                        multiplier += 0.05;
-                        createParticle(bitcoin.x, bitcoin.y, '#f7931a');
-                    }
-                }
-            });
-
-            // Collect multipliers
-            multiplierItems.forEach(item => {
-                if (!item.collected) {
-                    const distance = Math.hypot(player.x - item.x, player.y - item.y);
-                    if (distance < player.radius + item.radius) {
-                        item.collected = true;
-                        multiplier = item.value;
-                        createParticle(item.x, item.y, '#ff66ff');
-                        showMultiplierPopup(item.x - 20, item.y - camera.y - 30, item.value);
-                    }
-                }
-            });
-
-            // Camera follow (lowered: player at 40% from top)
-            const targetCameraY = player.y - window.innerHeight * 0.4;
-            camera.y += (targetCameraY - camera.y) * 0.15;
-
-            // Update altitude
-            altitude = Math.max(0, Math.floor((window.innerHeight - 50 - player.y) / 10));
-
-            // Update particles
-            updateParticles();
-
-            // Check for game over (falling)
-            if (player.y > camera.y + window.innerHeight + 50) {
-                gameOver();
-            }
-
-            // Reset click
-            keys['click'] = false;
-        }
-
-        // Draw
-        function draw() {
-            ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-
-            const gradient1 = ctx.createLinearGradient(0, 0, 0, window.innerHeight);
-            gradient1.addColorStop(0, '#000428');
-            gradient1.addColorStop(0.3, '#004e92');
-            gradient1.addColorStop(0.7, '#1a2980');
-            gradient1.addColorStop(1, '#26d0ce');
-            ctx.fillStyle = gradient1;
-            ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
-
-            ctx.save();
-            ctx.globalAlpha = 0.08;
-            for (let i = 0; i < 3; i++) {
-                ctx.beginPath();
-                for (let x = 0; x <= window.innerWidth; x += 20) {
-                    const y = Math.sin((x + Date.now() * 0.0005 + i * 100) * 0.01) * 30 + window.innerHeight * 0.8 + i * 50;
-                    if (x === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                ctx.lineTo(window.innerWidth, window.innerHeight);
-                ctx.lineTo(0, window.innerHeight);
-                ctx.closePath();
-                ctx.fillStyle = `hsl(${180 + i * 20}, 70%, 60%)`;
-                ctx.fill();
-            }
-            ctx.restore();
-
-            drawPlatforms();
-            drawObstacles();
-            drawBitcoins();
-            drawMultipliers();
-            drawParticles();
-            drawPlayer();
-
-            document.getElementById('altitude').textContent = altitude;
-            document.getElementById('bitcoins').textContent = totalBitcoins.toFixed(2);
-            document.getElementById('multiplier').textContent = multiplier.toFixed(1);
-        }
-
-        // Game loop
-        function gameLoop() {
-            if (gameRunning) {
-                update();
-            }
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
-
-        // Game over
-        function gameOver() {
-            gameRunning = false;
-            autoPlay = false;
-            document.getElementById('finalAltitude').textContent = altitude;
-            document.getElementById('finalBitcoins').textContent = totalBitcoins.toFixed(2);
-            document.getElementById('gameOver').style.display = 'block';
-        }
-
-        // Restart game
-        function restartGame() {
-            gameRunning = true;
-            autoPlay = false;
-            player.x = window.innerWidth / 2;
-            player.y = window.innerHeight - 100;
-            player.velocityY = 0;
-            player.velocityX = 0;
-            player.onGround = false;
-            player.jumpCount = 0;
-            camera.y = 0;
-            altitude = 0;
-            totalBitcoins = 0;
-            multiplier = 1.0;
-            particles = [];
-            keys = {};
-            initPlatforms();
-            document.getElementById('gameOver').style.display = 'none';
-        }
-
-        // Events
-        window.addEventListener('keydown', (e) => {
-            keys[e.key] = true;
-        });
-
-        window.addEventListener('keyup', (e) => {
-            keys[e.key] = false;
-        });
-
-        canvas.addEventListener('click', (e) => {
-            if (gameRunning && !autoPlay) {
-                keys['click'] = true;
-            }
-        });
-
-        canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (gameRunning && !autoPlay) {
-                touchOriginalStartX = touchStartX = e.touches[0].clientX;
-                touchOriginalStartY = touchStartY = e.touches[0].clientY;
-            }
-        }, { passive: false });
-
-        canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            if (gameRunning && !autoPlay) {
-                touchEndX = e.touches[0].clientX;
-                touchEndY = e.touches[0].clientY;
-
-                const deltaX = touchEndX - touchStartX;
-                player.velocityX += deltaX * 0.02;
-
-                touchStartX = touchEndX;
-                touchStartY = touchEndY;
-            }
-        }, { passive: false });
-
-        canvas.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            if (gameRunning && !autoPlay) {
-                const deltaX = touchEndX - touchOriginalStartX;
-                const deltaY = touchEndY - touchOriginalStartY;
-                const distance = Math.hypot(deltaX, deltaY);
-                if (distance < tapThreshold) {
-                    keys['click'] = true;
-                }
-            }
-        }, { passive: false });
-
-        document.getElementById('restartButton').addEventListener('click', restartGame);
-
-        document.getElementById('autoButton').addEventListener('click', () => {
-            if (gameRunning) {
-                autoPlay = !autoPlay;
-            }
-        });
-
-        window.addEventListener('resize', () => {
-            resizeCanvas();
-            player.x = Math.min(Math.max(player.x, player.radius), window.innerWidth - player.radius);
-        });
-
-        // Initialization
-        createBackground();
-        initPlatforms();
-        gameLoop();
-    </script>
+        state.user = user;
+        state.currentUserId = user.id;
+        state.theme = user.theme;
+        document.body.classList.remove("dark", "light");
+        document.body.classList.add(state.theme);
+      } else {
+        toast("Telegram WebApp not available", "error");
+        return;
+      }
+    } else {
+      toast("Telegram WebApp script not loaded", "error");
+      return;
+    }
+
+    await fetchAllData();
+    document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", (e)=>setTab(e.currentTarget.dataset.tab)));
+    await setTab(state.currentTab);
+    tick();
+
+    // Random modals
+    setInterval(() => {
+      if (Math.random() < 0.05) showInviteModal();
+      if (Math.random() < 0.05) showSubscribeModal();
+    }, 300000); // every 5 min, 5% chance
+  }
+
+  function recalcPrices() {
+    state.companies.forEach(c => {
+      c.last_price = stockFairPrice(c);
+    });
+    state.cryptos.forEach(co => {
+      co.last_price = cryptoFairPrice(co);
+    });
+  }
+
+  init();
+  </script>
 </body>
 </html>
