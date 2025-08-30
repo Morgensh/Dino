@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>Glowing Ball</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(180deg, #1a2980 0%, #26d0ce 100%);
+            height: 100vh;
+            touch-action: none;
+            user-select: none;
+        }
+
+        canvas {
+            display: block;
+            background: linear-gradient(180deg, #1a2980 0%, #26d0ce 100%);
+            touch-action: none;
+        }
+
+        .ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 16px;
+            z-index: 100;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+        }
+
+        .bitcoin-icon {
+            color: #f7931a;
+            font-weight: bold;
+        }
+
+        .stars {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 3s infinite ease-in-out;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .multiplier-popup {
+            position: absolute;
+            color: #ffdd44;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
+            z-index: 200;
+            animation: multiplierPop 1s ease-out forwards;
+        }
+
+        @keyframes multiplierPop {
+            0% { transform: scale(0.5) translateY(0); opacity: 1; }
+            50% { transform: scale(1.2) translateY(-20px); opacity: 1; }
+            100% { transform: scale(1) translateY(-40px); opacity: 0; }
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            font-size: 24px;
+            z-index: 300;
+            background: rgba(0,0,0,0.7);
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        #restartButton {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #f7931a;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        #autoButton {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0);
+            border-radius: 50%;
+            z-index: 100;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0);
+            font-size: 12px;
+            text-shadow: none;
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="stars" id="stars"></div>
+
+    <div class="ui">
+        <div>Altitude: <span id="altitude">0</span>m</div>
+        <div>Bitcoins: <span class="bitcoin-icon">₿</span><span id="bitcoins">0.00</span></div>
+        <div>Multiplier: x<span id="multiplier">1.0</span></div>
+    </div>
+
+    <div id="gameOver">
+        <div>Game Over!</div>
+        <div>You lost the won bitcoins and your bet burned.</div>
+        <div>Altitude: <span id="finalAltitude">0</span>m</div>
+        <div>Bitcoins: <span id="finalBitcoins">0.00</span></div>
+        <button id="restartButton">Play Again</button>
+    </div>
+
+    <div id="autoButton">Auto</div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        if (window.Telegram && window.Telegram.WebApp) {
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+
+        function resizeCanvas() {
+            canvas.style.width = window.innerWidth + 'px';
+            canvas.style.height = window.innerHeight + 'px';
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(dpr, dpr);
+        }
+
+        resizeCanvas();
+
+        // Game variables
+        let player = {
+            x: window.innerWidth / 2,
+            y: window.innerHeight - 100,
+            radius: 20,
+            velocityY: 0,
+            velocityX: 0,
+            onGround: false,
+            jumpCount: 0,
+            maxJumps: 2,
+            glowIntensity: 0
+        };
+
+        let camera = { y: 0 };
+        let platforms = [];
+        let obstacles = [];
+        let bitcoins = [];
+        let multiplierItems = [];
+        let particles = [];
+        let altitude = 0;
+        let totalBitcoins = 0;
+        let multiplier = 1.0;
+        let keys = {};
+        let gameRunning = true;
+        let autoPlay = false;
+
+        // Physics
+        const gravity = 0.6;
+        const jumpPower = -16;
+        const platformWidth = 150;
+        const platformHeight = 25;
+        const obstacleSize = 20;
+        const platformSpacing = 120;
+
+        // Touch variables
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchOriginalStartX = 0;
+        let touchOriginalStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+        const tapThreshold = 20; // Pixels to distinguish tap from swipe
+
+        // Create background
+        function createBackground() {
+            const starsContainer = document.getElementById('stars');
+            for (let i = 0; i < 100; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.width = Math.random() * 3 + 1 + 'px';
+                star.style.height = star.style.width;
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 70 + '%';
+                star.style.animationDelay = Math.random() * 3 + 's';
+                star.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                starsContainer.appendChild(star);
+            }
+        }
+
+        // Initialize platforms, obstacles, bitcoins, and multipliers
+        function initPlatforms() {
+            platforms = [];
+            obstacles = [];
+            bitcoins = [];
+            multiplierItems = [];
+
+            // Starting platform
+            platforms.push({
+                x: window.innerWidth / 2 - platformWidth / 2,
+                y: window.innerHeight - 50,
+                width: platformWidth,
+                height: platformHeight
+            });
+
+            // Generate platforms
+            for (let i = 1; i < 50; i++) {
+                const prevPlatform = platforms[platforms.length - 1];
+                const maxXOffset = window.innerWidth * 0.4;
+                const randomX = prevPlatform.x + (Math.random() - 0.5) * maxXOffset;
+                const clampedX = Math.max(0, Math.min(randomX, window.innerWidth - platformWidth));
+
+                platforms.push({
+                    x: clampedX,
+                    y: prevPlatform.y - platformSpacing - Math.random() * 20,
+                    width: platformWidth,
+                    height: platformHeight
+                });
+
+                // Add bitcoins with 50% probability
+                if (Math.random() < 0.5) {
+                    const platform = platforms[platforms.length - 1];
+                    bitcoins.push({
+                        x: platform.x + Math.random() * platform.width,
+                        y: platform.y - 40,
+                        radius: 15,
+                        value: +(Math.random() * 2 + 0.1).toFixed(2),
+                        collected: false,
+                        rotation: 0,
+                        bounce: 0
+                    });
+                }
+
+                // Add multipliers with 33% probability
+                if (Math.random() < 0.33) {
+                    const platform = platforms[platforms.length - 1];
+                    const multiplierValues = [1.5, 2.0, 2.5, 3.0, 5.0];
+                    multiplierItems.push({
+                        x: platform.x + Math.random() * platform.width,
+                        y: platform.y - 50,
+                        radius: 18,
+                        value: multiplierValues[Math.floor(Math.random() * multiplierValues.length)],
+                        collected: false,
+                        rotation: 0,
+                        pulse: 0
+                    });
+                }
+
+                // Add obstacles (spikes) with 20% probability
+                if (Math.random() < 0.2) {
+                    const platform = platforms[platforms.length - 1];
+                    obstacles.push({
+                        x: platform.x + Math.random() * (platform.width - obstacleSize),
+                        y: platform.y - obstacleSize,
+                        width: obstacleSize,
+                        height: obstacleSize,
+                        platform: platform
+                    });
+                }
+            }
+        }
+
+        // Show multiplier popup
+        function showMultiplierPopup(x, y, value) {
+            const popup = document.createElement('div');
+            popup.className = 'multiplier-popup';
+            popup.style.left = x + 'px';
+            popup.style.top = y + 'px';
+            popup.textContent = `${value}X`;
+            document.body.appendChild(popup);
+
+            setTimeout(() => {
+                if (popup.parentNode) {
+                    popup.parentNode.removeChild(popup);
+                }
+            }, 1000);
+        }
+
+        // Create particles (reduced number for performance)
+        function createParticle(x, y, color) {
+            for (let i = 0; i < 5; i++) { // Reduced from 10 to 5
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 1,
+                    color: color
+                });
+            }
+        }
+
+        // Update particles
+        function updateParticles() {
+            particles = particles.filter(particle => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vy += 0.15;
+                particle.life -= 0.025;
+                return particle.life > 0;
+            });
+        }
+
+        // Draw multipliers
+        function drawMultipliers() {
+            multiplierItems.forEach(item => {
+                if (!item.collected) {
+                    const screenY = item.y - camera.y;
+                    if (screenY > -50 && screenY < window.innerHeight + 50) {
+                        item.rotation += 0.02;
+                        item.pulse = Math.sin(Date.now() * 0.005) * 0.2 + 1;
+
+                        ctx.save();
+                        ctx.translate(item.x, screenY);
+                        ctx.rotate(item.rotation);
+                        ctx.scale(item.pulse, item.pulse);
+
+                        const glowGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, item.radius * 2);
+                        glowGradient.addColorStop(0, 'rgba(255, 0, 255, 0.6)');
+                        glowGradient.addColorStop(0.5, 'rgba(255, 100, 255, 0.3)');
+                        glowGradient.addColorStop(1, 'rgba(255, 0, 255, 0)');
+                        ctx.fillStyle = glowGradient;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, item.radius * 2, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        const mainGradient = ctx.createRadialGradient(-5, -5, 0, 0, 0, item.radius);
+                        mainGradient.addColorStop(0, '#ff66ff');
+                        mainGradient.addColorStop(0.7, '#cc00cc');
+                        mainGradient.addColorStop(1, '#990099');
+
+                        ctx.fillStyle = mainGradient;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, item.radius, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 14px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`${item.value}X`, 0, 5);
+
+                        ctx.restore();
+                    }
+                }
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.save();
+                ctx.globalAlpha = particle.life;
+                ctx.fillStyle = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y - camera.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        // Draw player
+        function drawPlayer() {
+            const screenY = player.y - camera.y;
+
+            player.glowIntensity = Math.sin(Date.now() * 0.008) * 0.2 + 0.6;
+
+            ctx.save();
+
+            const gradient = ctx.createRadialGradient(player.x, screenY, 0, player.x, screenY, player.radius * 2.5);
+            gradient.addColorStop(0, `rgba(0, 255, 255, ${player.glowIntensity * 0.6})`);
+            gradient.addColorStop(0.5, `rgba(0, 200, 255, ${player.glowIntensity * 0.3})`);
+            gradient.addColorStop(1, 'rgba(0, 150, 255, 0)');
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(player.x, screenY, player.radius * 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            const ballGradient = ctx.createRadialGradient(
+                player.x - player.radius * 0.3,
+                screenY - player.radius * 0.3,
+                0,
+                player.x,
+                screenY,
+                player.radius
+            );
+            ballGradient.addColorStop(0, '#ffffff');
+            ballGradient.addColorStop(0.3, '#00ffff');
+            ballGradient.addColorStop(1, '#0080ff');
+
+            ctx.fillStyle = ballGradient;
+            ctx.beginPath();
+            ctx.arc(player.x, screenY, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.beginPath();
+            ctx.arc(player.x - player.radius * 0.3, screenY - player.radius * 0.3, player.radius * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // Draw platforms
+        function drawPlatforms() {
+            platforms.forEach(platform => {
+                const screenY = platform.y - camera.y;
+                if (screenY > -50 && screenY < window.innerHeight + 50) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                    ctx.fillRect(platform.x + 4, screenY + 4, platform.width, platform.height);
+
+                    const gradient = ctx.createLinearGradient(0, screenY, 0, screenY + platform.height);
+                    gradient.addColorStop(0, '#4a90e2');
+                    gradient.addColorStop(1, '#2c5aa0');
+
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(platform.x, screenY, platform.width, platform.height);
+
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.fillRect(platform.x, screenY, platform.width, 2);
+                }
+            });
+        }
+
+        // Draw obstacles (spikes)
+        function drawObstacles() {
+            obstacles.forEach(obstacle => {
+                const screenY = obstacle.y - camera.y;
+                if (screenY > -50 && screenY < window.innerHeight + 50) {
+                    ctx.fillStyle = '#ff0000';
+                    ctx.beginPath();
+                    ctx.moveTo(obstacle.x, screenY + obstacle.height);
+                    ctx.lineTo(obstacle.x + obstacle.width / 2, screenY);
+                    ctx.lineTo(obstacle.x + obstacle.width, screenY + obstacle.height);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            });
+        }
+
+        // Draw bitcoins
+        function drawBitcoins() {
+            bitcoins.forEach(bitcoin => {
+                if (!bitcoin.collected) {
+                    const screenY = bitcoin.y - camera.y;
+                    if (screenY > -50 && screenY < window.innerHeight + 50) {
+                        bitcoin.rotation += 0.03;
+                        bitcoin.bounce = Math.sin(Date.now() * 0.004 + bitcoin.x) * 4;
+
+                        const drawY = screenY + bitcoin.bounce;
+
+                        ctx.save();
+                        ctx.translate(bitcoin.x, drawY);
+                        ctx.rotate(bitcoin.rotation);
+
+                        const glowGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, bitcoin.radius * 1.5);
+                        glowGradient.addColorStop(0, 'rgba(247, 147, 26, 0.6)');
+                        glowGradient.addColorStop(1, 'rgba(247, 147, 26, 0)');
+                        ctx.fillStyle = glowGradient;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, bitcoin.radius * 1.5, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        const coinGradient = ctx.createRadialGradient(-3, -3, 0, 0, 0, bitcoin.radius);
+                        coinGradient.addColorStop(0, '#ffdd44');
+                        coinGradient.addColorStop(0.8, '#f7931a');
+                        coinGradient.addColorStop(1, '#cc7a00');
+
+                        ctx.fillStyle = coinGradient;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, bitcoin.radius, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 16px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('₿', 0, 5);
+
+                        ctx.restore();
+
+                        // Draw value above the bitcoin
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 12px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        ctx.fillText(bitcoin.value.toFixed(2), bitcoin.x, drawY - bitcoin.radius - 5);
+                    }
+                }
+            });
+        }
+
+        // Autopilot logic (improved)
+        function autoPlayLogic() {
+            let targetX = player.x;
+            let shouldJump = false;
+
+            // Prioritize multipliers over bitcoins
+            const items = [...multiplierItems.filter(m => !m.collected), ...bitcoins.filter(b => !b.collected)];
+            let closestItem = null;
+            let minDist = Infinity;
+
+            items.forEach(item => {
+                const dist = Math.hypot(item.x - player.x, item.y - player.y);
+                // Prefer items slightly above or on level, and multipliers get bonus
+                const score = dist - (item.value ? item.value * 10 : 0) + (player.y - item.y) * 0.5;
+                if (score < minDist && item.y <= player.y + 200) {
+                    minDist = score;
+                    closestItem = item;
+                }
+            });
+
+            if (closestItem) {
+                targetX = closestItem.x;
+                // Jump if item is above and reachable, or if falling towards it
+                if (closestItem.y < player.y - player.radius && player.jumpCount < player.maxJumps) {
+                    if (Math.abs(player.x - closestItem.x) < 50 || player.onGround) { // Better jump timing
+                        shouldJump = true;
+                    }
+                }
+            } else {
+                // Find next platform above
+                let nextPlatform = null;
+                let minDY = Infinity;
+
+                platforms.forEach(p => {
+                    const dy = player.y - p.y;
+                    if (dy > 50 && dy < minDY) {
+                        minDY = dy;
+                        nextPlatform = p;
+                    }
+                });
+
+                if (nextPlatform) {
+                    targetX = nextPlatform.x + nextPlatform.width / 2;
+
+                    // Avoid obstacles on the platform
+                    obstacles.forEach(o => {
+                        if (o.platform === nextPlatform) {
+                            const obsCenter = o.x + o.width / 2;
+                            if (Math.abs(targetX - obsCenter) < obstacleSize + player.radius + 10) {
+                                // Shift away from obstacle, prefer side closer to current position
+                                const shift = (player.x > obsCenter) ? obstacleSize + player.radius + 15 : - (obstacleSize + player.radius + 15);
+                                targetX = obsCenter + shift;
+                                targetX = Math.max(nextPlatform.x + player.radius, Math.min(targetX, nextPlatform.x + nextPlatform.width - player.radius));
+                            }
+                        }
+                    });
+
+                    // Jump timing: only if close enough horizontally and not already jumping up
+                    if ((player.onGround || (player.jumpCount < player.maxJumps && player.velocityY >= 0)) && Math.abs(player.x - targetX) < 100) {
+                        shouldJump = true;
+                    }
+                } else {
+                    // If no next platform, stay centered
+                    targetX = window.innerWidth / 2;
+                }
+            }
+
+            // Smooth movement to target
+            const dx = targetX - player.x;
+            player.velocityX += Math.sign(dx) * Math.min(Math.abs(dx) * 0.005, 0.8); // Gradual acceleration
+
+            // Limit speed
+            player.velocityX = Math.max(-5, Math.min(player.velocityX, 5));
+
+            // Execute jump
+            if (shouldJump && player.jumpCount < player.maxJumps) {
+                player.velocityY = jumpPower;
+                player.jumpCount++;
+                createParticle(player.x, player.y, '#00ffff');
+            }
+        }
+
+        // Update game
+        function update() {
+            if (!gameRunning) return;
+
+            if (autoPlay) {
+                autoPlayLogic();
+            } else {
+                // Manual control
+                if ((keys[' '] || keys['click']) && player.jumpCount < player.maxJumps) {
+                    player.velocityY = jumpPower;
+                    player.jumpCount++;
+                    createParticle(player.x, player.y, '#00ffff');
+                }
+
+                const keySpeed = 0.8;
+                if (keys['ArrowLeft'] || keys['a']) {
+                    player.velocityX -= keySpeed;
+                }
+                if (keys['ArrowRight'] || keys['d']) {
+                    player.velocityX += keySpeed;
+                }
+            }
+
+            // Player physics
+            player.velocityY += gravity;
+            player.y += player.velocityY;
+            player.x += player.velocityX;
+            player.velocityX *= 0.92;
+
+            // Screen boundaries
+            if (player.x < player.radius) player.x = player.radius;
+            if (player.x > window.innerWidth - player.radius) player.x = window.innerWidth - player.radius;
+
+            // Platform collisions
+            player.onGround = false;
+            platforms.forEach(platform => {
+                if (player.x > platform.x - player.radius &&
+                    player.x < platform.x + platform.width + player.radius &&
+                    player.y + player.radius > platform.y &&
+                    player.y + player.radius < platform.y + platform.height + 10 &&
+                    player.velocityY >= 0) {
+
+                    player.y = platform.y - player.radius;
+                    player.velocityY = 0;
+                    player.onGround = true;
+                    player.jumpCount = 0;
+                }
+            });
+
+            // Obstacle collisions
+            obstacles.forEach(obstacle => {
+                if (player.x + player.radius > obstacle.x &&
+                    player.x - player.radius < obstacle.x + obstacle.width &&
+                    player.y + player.radius > obstacle.y &&
+                    player.y - player.radius < obstacle.y + obstacle.height) {
+                    gameOver();
+                }
+            });
+
+            // Collect bitcoins
+            bitcoins.forEach(bitcoin => {
+                if (!bitcoin.collected) {
+                    const distance = Math.hypot(player.x - bitcoin.x, player.y - bitcoin.y);
+                    if (distance < player.radius + bitcoin.radius) {
+                        bitcoin.collected = true;
+                        totalBitcoins += bitcoin.value * multiplier;
+                        multiplier += 0.05;
+                        createParticle(bitcoin.x, bitcoin.y, '#f7931a');
+                    }
+                }
+            });
+
+            // Collect multipliers
+            multiplierItems.forEach(item => {
+                if (!item.collected) {
+                    const distance = Math.hypot(player.x - item.x, player.y - item.y);
+                    if (distance < player.radius + item.radius) {
+                        item.collected = true;
+                        multiplier = item.value;
+                        createParticle(item.x, item.y, '#ff66ff');
+                        showMultiplierPopup(item.x - 20, item.y - camera.y - 30, item.value);
+                    }
+                }
+            });
+
+            // Camera follow (lowered: player at 40% from top)
+            const targetCameraY = player.y - window.innerHeight * 0.4;
+            camera.y += (targetCameraY - camera.y) * 0.15;
+
+            // Update altitude
+            altitude = Math.max(0, Math.floor((window.innerHeight - 50 - player.y) / 10));
+
+            // Update particles
+            updateParticles();
+
+            // Check for game over (falling)
+            if (player.y > camera.y + window.innerHeight + 50) {
+                gameOver();
+            }
+
+            // Reset click
+            keys['click'] = false;
+        }
+
+        // Draw
+        function draw() {
+            ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+            const gradient1 = ctx.createLinearGradient(0, 0, 0, window.innerHeight);
+            gradient1.addColorStop(0, '#000428');
+            gradient1.addColorStop(0.3, '#004e92');
+            gradient1.addColorStop(0.7, '#1a2980');
+            gradient1.addColorStop(1, '#26d0ce');
+            ctx.fillStyle = gradient1;
+            ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+            ctx.save();
+            ctx.globalAlpha = 0.08;
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                for (let x = 0; x <= window.innerWidth; x += 20) {
+                    const y = Math.sin((x + Date.now() * 0.0005 + i * 100) * 0.01) * 30 + window.innerHeight * 0.8 + i * 50;
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.lineTo(window.innerWidth, window.innerHeight);
+                ctx.lineTo(0, window.innerHeight);
+                ctx.closePath();
+                ctx.fillStyle = `hsl(${180 + i * 20}, 70%, 60%)`;
+                ctx.fill();
+            }
+            ctx.restore();
+
+            drawPlatforms();
+            drawObstacles();
+            drawBitcoins();
+            drawMultipliers();
+            drawParticles();
+            drawPlayer();
+
+            document.getElementById('altitude').textContent = altitude;
+            document.getElementById('bitcoins').textContent = totalBitcoins.toFixed(2);
+            document.getElementById('multiplier').textContent = multiplier.toFixed(1);
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (gameRunning) {
+                update();
+            }
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Game over
+        function gameOver() {
+            gameRunning = false;
+            autoPlay = false;
+            document.getElementById('finalAltitude').textContent = altitude;
+            document.getElementById('finalBitcoins').textContent = totalBitcoins.toFixed(2);
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // Restart game
+        function restartGame() {
+            gameRunning = true;
+            autoPlay = false;
+            player.x = window.innerWidth / 2;
+            player.y = window.innerHeight - 100;
+            player.velocityY = 0;
+            player.velocityX = 0;
+            player.onGround = false;
+            player.jumpCount = 0;
+            camera.y = 0;
+            altitude = 0;
+            totalBitcoins = 0;
+            multiplier = 1.0;
+            particles = [];
+            keys = {};
+            initPlatforms();
+            document.getElementById('gameOver').style.display = 'none';
+        }
+
+        // Events
+        window.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        canvas.addEventListener('click', (e) => {
+            if (gameRunning && !autoPlay) {
+                keys['click'] = true;
+            }
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameRunning && !autoPlay) {
+                touchOriginalStartX = touchStartX = e.touches[0].clientX;
+                touchOriginalStartY = touchStartY = e.touches[0].clientY;
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (gameRunning && !autoPlay) {
+                touchEndX = e.touches[0].clientX;
+                touchEndY = e.touches[0].clientY;
+
+                const deltaX = touchEndX - touchStartX;
+                player.velocityX += deltaX * 0.02;
+
+                touchStartX = touchEndX;
+                touchStartY = touchEndY;
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (gameRunning && !autoPlay) {
+                const deltaX = touchEndX - touchOriginalStartX;
+                const deltaY = touchEndY - touchOriginalStartY;
+                const distance = Math.hypot(deltaX, deltaY);
+                if (distance < tapThreshold) {
+                    keys['click'] = true;
+                }
+            }
+        }, { passive: false });
+
+        document.getElementById('restartButton').addEventListener('click', restartGame);
+
+        document.getElementById('autoButton').addEventListener('click', () => {
+            if (gameRunning) {
+                autoPlay = !autoPlay;
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            player.x = Math.min(Math.max(player.x, player.radius), window.innerWidth - player.radius);
+        });
+
+        // Initialization
+        createBackground();
+        initPlatforms();
+        gameLoop();
+    </script>
+</body>
+</html>
