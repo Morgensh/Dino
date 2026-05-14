@@ -600,15 +600,23 @@ function newGame(){
   setIntel('GENERATING...');
   const seed=Date.now()%999983+Math.random()*1000|0;
   generateIsland(seed);placeNodes(seed);buildVoronoi();updateTerritory();buildHUD();startAI();
-  vs=Math.min(canvas.width/MW,canvas.height/MH)*.88;
-  vx=(canvas.width-MW*vs)/2;vy=(canvas.height-MH*vs)/2;
+  // Масштабируем карту так, чтобы она полностью заполняла экран без чёрных полей
+vs=Math.max(canvas.width/MW, canvas.height/MH);
+
+// Центрируем карту
+vx=(canvas.width-MW*vs)/2;
+vy=(canvas.height-MH*vs)/2;
   setIntel('AWAITING ORDERS');
 }
 
 function resize(){
   canvas.width=window.innerWidth;canvas.height=window.innerHeight;
-  vs=Math.min(canvas.width/MW,canvas.height/MH)*.88;
-  vx=(canvas.width-MW*vs)/2;vy=(canvas.height-MH*vs)/2;
+  // Автоматически увеличиваем карту до полного заполнения экрана
+vs=Math.max(canvas.width/MW, canvas.height/MH);
+
+// Центрируем карту
+vx=(canvas.width-MW*vs)/2;
+vy=(canvas.height-MH*vs)/2;
 }
 
 window.addEventListener('resize',resize);
