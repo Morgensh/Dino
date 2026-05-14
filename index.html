@@ -1,2181 +1,628 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DINO Game v2 — Бизнес, Крипта, ДиноНет</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Island Conquest</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;background:#06080f;overflow:hidden;font-family:'Courier New',monospace;touch-action:none;}
+#wrap{position:relative;width:100vw;height:100vh;}
+#canvas{position:absolute;inset:0;touch-action:none;}
 
-  <!-- Icons & Tailwind -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+#hud{
+  position:absolute;top:0;left:0;right:0;
+  display:flex;align-items:stretch;
+  pointer-events:none;z-index:100;
+  background:rgba(6,8,15,0.93);
+  border-bottom:1px solid rgba(255,210,80,0.18);
+  padding:6px 8px;gap:6px;flex-wrap:wrap;
+}
+.panel{
+  display:flex;flex-direction:column;justify-content:center;
+  padding:3px 8px;border-left:2px solid rgba(255,210,80,0.45);
+}
+.label{font-size:7px;text-transform:uppercase;letter-spacing:1.4px;color:rgba(255,210,80,0.5);margin-bottom:1px;}
+.val{color:#fff;font-weight:bold;font-size:1em;letter-spacing:.8px;}
+.stats{display:flex;gap:4px;flex:1;justify-content:center;flex-wrap:wrap;}
 
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            // Dark theme colors
-            darkBg: "#0f1117",
-            darkBgLight: "#1a1d26",
-            darkCard: "#1d212c",
-            darkCardHover: "#232734",
-            darkPrimary: "#10b981",
-            darkPrimaryHover: "#059669",
-            darkSecondary: "#facc15",
-            darkDanger: "#ef4444",
-            darkMuted: "#94a3b8",
-            darkBorder: "#2d323d",
+#status-panel{min-width:0;flex:1.2;}
+#status{font-weight:bold;letter-spacing:1px;font-size:.82em;color:#ffd250;}
+#intel{font-size:8px;margin-top:2px;color:rgba(255,255,255,0.6);letter-spacing:.4px;}
 
-            // Light theme colors optimized
-            lightBg: "#f0f4f8",
-            lightBgLight: "#ffffff",
-            lightCard: "#ffffff",
-            lightCardHover: "#e5e7eb",
-            lightPrimary: "#047857",
-            lightPrimaryHover: "#03543f",
-            lightSecondary: "#d97706",
-            lightDanger: "#b91c1c",
-            lightMuted: "#4b5563",
-            lightBorder: "#d1d5db"
-          },
-          boxShadow: {
-            dino: "0 10px 30px rgba(16,185,129,.15)",
-            card: "0 8px 25px rgba(0,0,0,.3)",
-            glow: "0 0 15px rgba(16,185,129,.3)"
-          },
-          animation: {
-            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-            'float': 'float 6s ease-in-out infinite',
-            'bounce-subtle': 'bounce 1s infinite',
-          },
-          keyframes: {
-            float: {
-              '0%, 100%': { transform: 'translateY(0)' },
-              '50%': { transform: 'translateY(-10px)' },
-            }
-          }
-        }
-      }
-    }
-  </script>
+#newgame{
+  pointer-events:auto;
+  background:rgba(255,210,80,0.1);
+  border:1px solid rgba(255,210,80,0.32);
+  color:#ffd250;padding:0 12px;
+  font-size:8px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;
+  font-family:'Courier New',monospace;transition:background .15s;
+  white-space:nowrap;min-height:34px;align-self:stretch;border-radius:2px;
+}
+#newgame:active{background:rgba(255,210,80,0.22);}
 
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+#footer{
+  position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
+  color:rgba(255,210,80,0.38);font-size:8px;pointer-events:none;
+  text-transform:uppercase;letter-spacing:1.2px;text-align:center;
+  background:rgba(6,8,15,0.8);padding:4px 12px;
+  border:1px solid rgba(255,210,80,0.1);border-radius:18px;white-space:nowrap;
+}
 
-    * {
-      box-sizing: border-box;
-      font-family: 'Inter', sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
+#mode-banner{
+  display:none;
+  position:absolute;bottom:42px;left:50%;transform:translateX(-50%);
+  padding:6px 20px;font-size:10px;letter-spacing:2px;font-weight:bold;
+  border-radius:3px;pointer-events:none;z-index:150;text-transform:uppercase;
+  border:1px solid;white-space:nowrap;
+}
 
-    body {
-      min-height: 100vh;
-      margin: 0;
-      padding: 0;
-      overflow-x: hidden;
-      user-select: none;
-    }
+#gameover{
+  display:none;
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:rgba(6,8,15,0.97);border:1px solid rgba(255,210,80,0.4);
+  padding:22px 40px;text-align:center;z-index:300;pointer-events:none;min-width:220px;
+}
+#gameover .go-title{font-size:1.9em;font-weight:bold;letter-spacing:4px;margin-bottom:6px;}
+#gameover .go-sub{font-size:10px;letter-spacing:2px;opacity:.7;color:#fff;}
 
-    body.dark {
-      background-color: #0f1117;
-      color: #f8fafc;
-    }
-
-    body.light {
-      background-color: #f0f4f8;
-      color: #1f2937;
-    }
-
-    .gradient-bg {
-      background: linear-gradient(135deg, #0f1117 0%, #1a1d26 100%);
-    }
-
-    .dino-gradient-text {
-      background: linear-gradient(90deg, #10b981, #facc15);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .nav-btn.active {
-      color: #facc15;
-      position: relative;
-    }
-
-    .nav-btn.active::after {
-      content: '';
-      position: absolute;
-      bottom: -4px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 24px;
-      height: 3px;
-      background: #facc15;
-      border-radius: 3px;
-    }
-
-    .tab-btn.active {
-      background: #10b981;
-      color: #fff;
-    }
-
-    .glass {
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .card {
-      border-radius: 16px;
-      transition: all 0.3s ease;
-    }
-
-    .dark .card {
-      background: #1d212c;
-      border: 1px solid #2d323d;
-    }
-
-    .light .card {
-      background: #ffffff;
-      border: 1px solid #d1d5db;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    }
-
-    .card:hover {
-      transform: translateY(-2px);
-    }
-
-    .dark .card:hover {
-      box-shadow: 0 8px 25px rgba(0,0,0,.2);
-      border-color: rgba(16,185,129,.2);
-    }
-
-    .light .card:hover {
-      box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-      border-color: rgba(16,185,129,.2);
-    }
-
-    .pill {
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-weight: 500;
-    }
-
-    .dark .pill {
-      background: rgba(16,185,129,.15);
-      color: #10b981;
-    }
-
-    .light .pill {
-      background: rgba(16,185,129,.1);
-      color: #047857;
-    }
-
-    .fade-in {
-      animation: fadein 0.25s ease-out;
-    }
-
-    .slide-in {
-      animation: slideIn 0.3s ease-out;
-    }
-
-    .coin-pop {
-      animation: coinPop 0.6s ease-out forwards;
-    }
-
-    .progress-bar {
-      overflow: hidden;
-      border-radius: 10px;
-    }
-
-    .dark .progress-bar {
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    .light .progress-bar {
-      background: rgba(0, 0, 0, 0.05);
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #10b981, #34d399);
-      border-radius: 10px;
-      transition: width 0.5s ease;
-    }
-
-    @keyframes fadein {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateX(-10px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-
-    @keyframes coinPop {
-      0% { opacity: 1; transform: translateY(0) scale(1); }
-      50% { opacity: 0.8; transform: translateY(-30px) scale(1.1); }
-      100% { opacity: 0; transform: translateY(-60px) scale(1); }
-    }
-
-    /* Desktop specific styles */
-    @media (min-width: 768px) {
-      .desktop-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
-      }
-
-      .desktop-sidebar {
-        width: 260px;
-        flex-shrink: 0;
-      }
-
-      .desktop-content {
-        flex-grow: 1;
-        margin-left: 20px;
-      }
-
-      .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
-      }
-    }
-
-    /* Mobile specific styles */
-    @media (max-width: 767px) {
-      .mobile-tab-content {
-        padding-bottom: 80px;
-      }
-
-      .mobile-bottom-nav {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        z-index: 50;
-        backdrop-filter: blur(10px);
-      }
-
-      .dark .mobile-bottom-nav {
-        background: rgba(29, 33, 44, 0.9);
-        border-top: 1px solid #2d323d;
-      }
-
-      .light .mobile-bottom-nav {
-        background: rgba(255, 255, 255, 0.9);
-        border-top: 1px solid #d1d5db;
-      }
-
-      textarea {
-        max-height: 100px;
-        overflow-y: auto;
-        word-break: break-word;
-      }
-
-      .post-text {
-        overflow: hidden;
-        max-height: 100px;
-        text-overflow: ellipsis;
-      }
-
-      .post-expanded .post-text {
-        max-height: none;
-      }
-    }
-  </style>
+#wrap::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:200;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.022) 2px,rgba(0,0,0,.022) 4px);
+}
+</style>
 </head>
-
-<body class="gradient-bg min-h-screen dark"> <!-- Default dark theme -->
-  <!-- Desktop Layout -->
-  <div class="hidden md:flex desktop-container min-h-screen">
-    <!-- Sidebar -->
-    <aside class="desktop-sidebar glass rounded-2xl p-6 h-fit sticky top-6">
-      <div class="flex items-center mb-8">
-        <div class="w-14 h-14 rounded-full bg-darkCard flex items-center justify-center mr-3 border border-darkBorder">
-          <i class="fa-solid fa-dragon text-darkPrimary text-2xl"></i>
-        </div>
-        <div>
-          <h1 class="text-xl font-bold">DINO Game</h1>
-          <p class="text-darkMuted text-sm">v2.0</p>
-        </div>
-      </div>
-
-      <div class="mb-6 p-4 rounded-xl bg-darkCard">
-        <div class="text-center mb-2">
-          <div class="text-2xl font-bold"><span id="desktop-balance">0</span> DINO</div>
-        </div>
-        <div class="text-center mb-2">
-          <div class="text-lg font-bold text-darkSecondary"><span id="desktop-stars">0</span> ⭐</div>
-        </div>
-        <div class="text-center">
-          <div class="text-lg font-bold text-darkPrimary"><span id="desktop-ton">0</span> TON</div>
-        </div>
-        <div class="text-center mt-2">
-          <div class="text-lg font-bold text-darkPrimary"><span id="desktop-dps">0</span> DINO / сек</div>
-        </div>
-      </div>
-
-      <nav class="space-y-2">
-        <button class="desktop-nav-btn w-full text-left py-3 px-4 rounded-xl flex items-center transition-all" data-tab="clicker">
-          <i class="fa-regular fa-hand-pointer text-lg w-6 mr-3"></i>
-          <span>Кликер</span>
-        </button>
-        <button class="desktop-nav-btn w-full text-left py-3 px-4 rounded-xl flex items-center transition-all" data-tab="dinonet">
-          <i class="fa-solid fa-globe text-lg w-6 mr-3"></i>
-          <span>ДиноНет</span>
-        </button>
-        <button class="desktop-nav-btn w-full text-left py-3 px-4 rounded-xl flex items-center transition-all" data-tab="business">
-          <i class="fa-solid fa-building text-lg w-6 mr-3"></i>
-          <span>Бизнес</span>
-        </button>
-        <button class="desktop-nav-btn w-full text-left py-3 px-4 rounded-xl flex items-center transition-all" data-tab="investments">
-          <i class="fa-solid fa-chart-line text-lg w-6 mr-3"></i>
-          <span>Инвестиции</span>
-        </button>
-        <button class="desktop-nav-btn w-full text-left py-3 px-4 rounded-xl flex items-center transition-all" data-tab="profile">
-          <i class="fa-regular fa-user text-lg w-6 mr-3"></i>
-          <span>Профиль</span>
-        </button>
-      </nav>
-
-      <div class="mt-8 p-4 rounded-xl bg-darkCard">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-darkMuted">Уровень</span>
-          <span class="font-bold" id="desktop-level">1</span>
-        </div>
-        <div class="progress-bar h-2 w-full mb-1">
-          <div class="progress-fill" id="desktop-xp-bar" style="width: 0%"></div>
-        </div>
-        <div class="text-xs text-darkMuted text-right" id="desktop-xp-text">0/150 XP</div>
-      </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="desktop-content">
-      <div id="desktop-content" class="min-h-screen"></div>
-    </main>
+<body>
+<div id="wrap">
+  <canvas id="canvas"></canvas>
+  <div id="hud">
+    <div class="panel" id="status-panel">
+      <div id="status">ISLAND CONQUEST</div>
+      <div id="intel">AWAITING ORDERS</div>
+    </div>
+    <div class="stats" id="stats-row"></div>
+    <button id="newgame">↻ NEW</button>
   </div>
-
-  <!-- Mobile Layout -->
-  <div class="md:hidden">
-    <!-- Header -->
-    <header class="glass p-4 sticky top-0 z-40 border-b border-darkBorder">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center">
-          <img id="mobile-avatar" src="https://i.pravatar.cc/150?img=10" class="w-10 h-10 rounded-full mr-3">
-          <div>
-            <div class="font-bold"><span id="mobile-username">DinoUser</span></div>
-            <div class="text-xs text-darkMuted"><span id="mobile-balance">0</span> DINO</div>
-            <div class="text-xs text-darkSecondary"><span id="mobile-stars">0</span> ⭐</div>
-            <div class="text-xs text-darkPrimary"><span id="mobile-ton">0</span> TON</div>
-            <div class="text-xs text-darkMuted"><span id="mobile-dps">0</span>/сек</div>
-          </div>
-        </div>
-        <div class="flex items-center">
-          <div class="mr-3 text-right">
-            <div class="text-xs text-darkMuted">Ур. <span id="mobile-level">1</span></div>
-            <div class="text-xs text-darkPrimary" id="mobile-xp-text">0/150</div>
-          </div>
-          <div class="w-8 h-8 rounded-full bg-darkCard flex items-center justify-center">
-            <i class="fa-regular fa-user text-sm"></i>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- Content -->
-    <main id="mobile-content" class="mobile-tab-content p-4 pb-20"></main>
-
-    <!-- Bottom Navigation -->
-    <nav class="mobile-bottom-nav p-2 grid grid-cols-5 gap-1">
-      <button class="nav-btn flex flex-col items-center py-2 rounded-xl transition-all" data-tab="clicker">
-        <i class="fa-regular fa-hand-pointer text-lg mb-1"></i>
-        <span class="text-xs">Кликер</span>
-      </button>
-      <button class="nav-btn flex flex-col items-center py-2 rounded-xl transition-all" data-tab="dinonet">
-        <i class="fa-solid fa-globe text-lg mb-1"></i>
-        <span class="text-xs">ДиноНет</span>
-      </button>
-      <button class="nav-btn flex flex-col items-center py-2 rounded-xl transition-all" data-tab="business">
-        <i class="fa-solid fa-building text-lg mb-1"></i>
-        <span class="text-xs">Бизнес</span>
-      </button>
-      <button class="nav-btn flex flex-col items-center py-2 rounded-xl transition-all" data-tab="investments">
-        <i class="fa-solid fa-chart-line text-lg mb-1"></i>
-        <span class="text-xs">Инвестиции</span>
-      </button>
-      <button class="nav-btn flex flex-col items-center py-2 rounded-xl transition-all" data-tab="profile">
-        <i class="fa-regular fa-user text-lg mb-1"></i>
-        <span class="text-xs">Профиль</span>
-      </button>
-    </nav>
+  <div id="mode-banner"></div>
+  <div id="gameover">
+    <div class="go-title" id="go-title">VICTORY</div>
+    <div class="go-sub" id="go-sub">ISLAND FULLY CONQUERED</div>
   </div>
+  <div id="footer">TAP OWN→OWN: SUPPORT &nbsp;•&nbsp; TAP OWN→ENEMY: ATTACK &nbsp;•&nbsp; DRAG: PAN &nbsp;•&nbsp; PINCH: ZOOM</div>
+</div>
 
-  <!-- Modals / notifications -->
-  <div id="modal-root"></div>
-  <div id="toast-root" class="fixed top-3 right-3 space-y-2 z-[999] max-w-xs"></div>
+<script>
+(function(){
+'use strict';
 
-  <script>
-  /*********************
-   * Core Game State
-   *********************/
-  const API = 'http://localhost:3000'; // Change to your server URL if deployed
-  const ECON = {
-    CLICK_INC: 1.5,
-    CLICK_COST_MULT: 1.6,
-    EMISSION_COST_PER_SHARE: 10,
-    CLIENT_COST_DINO: 10000,
-    CLIENT_COST_TON: 0.1,
-    CLIENT_PACK_SIZE: 1000,
-    CLIENT_PACK_COST_STARS: 20,
-    STOCK_BASE_PRICE: 1,
-    STOCK_PRICE_PER_CLIENT: 0.05,
-    STOCK_PRICE_SMOOTH: 0.2,
-    CRYPTO_TON_COST: 10,
-    CRYPTO_STARS_COST: 50,
-    CRYPTO_DINO_COST_MIN: 50,
-    CRYPTO_TON_FIXED_PRICE: 1,
-    CRYPTO_STARS_FIXED_PRICE: 1,
-    CRYPTO_PRICE_PER_INVESTOR: 0.01,
-    CRYPTO_SMOOTH: 0.1,
-    CRYPTO_DPS_RATE_DIVISOR: 10,
-    CRYPTO_OWNER_SHARE_TON_STARS: 0.45,
-    CRYPTO_OWNER_SHARE_DINO: 1.0,
-    REF_REWARD: 1000000,
-    CRYPTO_SUPPLY_LIMIT: 1000
-  };
+// ═══════════════════════════════════════════════════
+// PRESETS
+// ═══════════════════════════════════════════════════
+const PRESETS=[
+  {name:'SMALL ISLAND',  mw:480,mh:320,nodes:10,enemies:1,minDist:46,rx:.34,ry:.28},
+  {name:'MEDIUM ISLAND', mw:640,mh:400,nodes:16,enemies:2,minDist:50,rx:.36,ry:.30},
+  {name:'LARGE ISLAND',  mw:820,mh:520,nodes:22,enemies:3,minDist:54,rx:.37,ry:.31},
+];
 
-  const state = {
-    currentTab: "clicker",
-    user: null,
-    currentUserId: null,
-    users: [],
-    companies: [],
-    cryptos: [],
-    wallet: {
-      stocks: {},
-      crypto: {}
-    },
-    messages: [],
-    dinonet: {
-      posts: []
-    },
-    theme: "dark",
-    lastTick: Date.now(),
-    lastInvestUpdate: Date.now(),
-    tgId: null
-  };
+// Цвета: 0=player(голубой), 1=enemy1(красный), 2=enemy2(оранжевый), 3=enemy3(фиолетовый), 4=neutral(серый)
+const FCOL=[[40,200,255],[255,60,80],[255,140,0],[200,60,255],[155,150,138]];
+const LAND_MIN_H=0.065;
 
-  // Elements
-  const $content = () => document.getElementById(isMobile() ? "mobile-content" : "desktop-content");
-  const $balance = () => document.getElementById(isMobile() ? "mobile-balance" : "desktop-balance");
-  const $stars = () => document.getElementById(isMobile() ? "mobile-stars" : "desktop-stars");
-  const $ton = () => document.getElementById(isMobile() ? "mobile-ton" : "desktop-ton");
-  const $dps = () => document.getElementById(isMobile() ? "mobile-dps" : "desktop-dps");
-  const $level = () => document.getElementById(isMobile() ? "mobile-level" : "desktop-level");
-  const $xpText = () => document.getElementById(isMobile() ? "mobile-xp-text" : "desktop-xp-text");
-  const $xpBar = () => document.getElementById("desktop-xp-bar");
-  const $modal = () => document.getElementById("modal-root");
-  const $toast = () => document.getElementById("toast-root");
-  const $mobileUsername = () => document.getElementById("mobile-username");
-  const $mobileAvatar = () => document.getElementById("mobile-avatar");
+let P=PRESETS[1], MW=P.mw, MH=P.mh;
+let hmap,bmap,nodes=[],pixelOwner,offC,terrC,terrCtx,terrBuf;
 
-  /*********************
-   * Utils
-   *********************/
-  function isMobile() {
-    return window.innerWidth < 768;
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+let vx=0,vy=0,vs=1;
+let selectedNode=null,hoveredNode=null;
+let time=0,frameCount=0,gameOver=false;
+
+// touch
+let pointers={},isDragging=false,dragStartX=0,dragStartY=0,vx0=0,vy0=0;
+let pinchDist0=0,pinchVs0=1,pinchMx=0,pinchMy=0,pinchVx0=0,pinchVy0=0,touchMoved=false;
+let mouseDown=false,mdX=0,mdY=0,mVx0=0,mVy0=0,mouseMoved=false;
+const THRESH=10;
+
+// ═══════════════════════════════════════════════════
+// SIMPLEX NOISE
+// ═══════════════════════════════════════════════════
+class SN{
+  constructor(s){
+    this.g=[[1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],[1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],[0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]];
+    const p=new Uint8Array(256);for(let i=0;i<256;i++)p[i]=i;
+    let r=s*2147483647|0;
+    for(let i=255;i>0;i--){r=(r*1664525+1013904223)&0x7fffffff;const j=r%(i+1);[p[i],p[j]]=[p[j],p[i]];}
+    this.pm=new Uint8Array(512);this.pm12=new Uint8Array(512);
+    for(let i=0;i<512;i++){this.pm[i]=p[i&255];this.pm12[i]=this.pm[i]%12;}
   }
+  dot(g,x,y){return g[0]*x+g[1]*y;}
+  n(xi,yi){
+    const F=.5*(Math.sqrt(3)-1),G=(3-Math.sqrt(3))/6;
+    const s=(xi+yi)*F,i=Math.floor(xi+s),j=Math.floor(yi+s),t=(i+j)*G;
+    const x0=xi-(i-t),y0=yi-(j-t);
+    let i1,j1;x0>y0?(i1=1,j1=0):(i1=0,j1=1);
+    const x1=x0-i1+G,y1=y0-j1+G,x2=x0-1+2*G,y2=y0-1+2*G;
+    const ii=i&255,jj=j&255;
+    const g0=this.pm12[ii+this.pm[jj]],g1=this.pm12[ii+i1+this.pm[jj+j1]],g2=this.pm12[ii+1+this.pm[jj+1]];
+    let t0=.5-x0*x0-y0*y0,n0=t0<0?0:(t0*=t0,t0*t0*this.dot(this.g[g0],x0,y0));
+    let t1=.5-x1*x1-y1*y1,n1=t1<0?0:(t1*=t1,t1*t1*this.dot(this.g[g1],x1,y1));
+    let t2=.5-x2*x2-y2*y2,n2=t2<0?0:(t2*=t2,t2*t2*this.dot(this.g[g2],x2,y2));
+    return 70*(n0+n1+n2);
+  }
+  oct(x,y,o,p,l){let v=0,a=1,f=1,m=0;for(let i=0;i<o;i++){v+=this.n(x*f,y*f)*a;m+=a;a*=p;f*=l;}return v/m;}
+}
+function rng(seed){let s=seed;return()=>{s=(s*9301+49297)%233280;return s/233280;};}
 
-  const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
-  const fmt = (n, d=2) => {
-    if (n >= 1e9) return (n/1e9).toFixed(d) + "B";
-    if (n >= 1e6) return (n/1e6).toFixed(d) + "M";
-    if (n >= 1e3) return (n/1e3).toFixed(d) + "K";
-    return Number(n).toFixed(d);
-  };
-  const now = () => Date.now();
-
-  const copyText = async (text) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast("Ссылка скопирована");
-    } catch {
-      toast("Не удалось скопировать", "error");
+// ═══════════════════════════════════════════════════
+// ISLAND GEN
+// ═══════════════════════════════════════════════════
+function generateIsland(seed){
+  const n1=new SN(seed*.001),n2=new SN(seed*.002+1337),n3=new SN(seed*.003+2674);
+  hmap=new Float32Array(MW*MH);
+  const tmap=new Float32Array(MW*MH),mmap=new Float32Array(MW*MH);
+  bmap=new Uint8Array(MW*MH);
+  for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){
+    const nx=x/MW-.5,ny=y/MH-.5;
+    const d=Math.sqrt((nx/P.rx)**2+(ny/P.ry)**2);
+    const dome=Math.pow(Math.max(0,1-d),2.2);
+    const noise=n1.oct(x/MW*2.8,y/MH*2.8,7,.5,2.05)+n1.oct(x/MW*1.1,y/MH*1.1,3,.45,2.2)*.22;
+    const drop=d>1?(d-1)*3.2:0;
+    hmap[y*MW+x]=dome*.6*1.9+noise*.26-.20-drop;
+  }
+  for(let i=0;i<MW*MH;i++){
+    const x=i%MW,y=(i/MW)|0,nx=x/MW,ny=y/MH,h=hmap[i];
+    tmap[i]=Math.max(0,Math.min(1,.72+n2.oct(nx*3,ny*3,3,.5,2)*.28-(h>.3?(h-.3)*.6:0)));
+    mmap[i]=Math.max(0,Math.min(1,n3.oct(nx*3,ny*3,3,.5,2)*.5+.5));
+  }
+  for(let i=0;i<MW*MH;i++){
+    const h=hmap[i],t=tmap[i],m=mmap[i];
+    if(h<-.38)bmap[i]=0;
+    else if(h<-.12)bmap[i]=1;
+    else if(h<.02)bmap[i]=2;
+    else if(h<.065)bmap[i]=3;
+    else if(h<.12)bmap[i]=4;
+    else if(h<.5){
+      if(t<.15)bmap[i]=10;
+      else if(t>.72)bmap[i]=m<.3?9:m<.5?8:7;
+      else bmap[i]=m<.35?8:m<.56?5:6;
     }
-  };
-
-  function toast(text, type="ok") {
-    const el = document.createElement("div");
-    el.className = `fade-in rounded-xl px-4 py-3 shadow-dino flex items-start ${type==="error"?"bg-red-500/20 border border-red-400/40":"bg-darkCard border border-darkBorder"}`;
-    el.innerHTML = `
-      <i class="fa-solid ${type==="error"?"fa-triangle-exclamation text-red-400":"fa-circle-check text-darkPrimary"} mr-2 mt-0.5"></i>
-      <div>${text}</div>
-    `;
-    $toast().appendChild(el);
-    setTimeout(() => {
-      el.style.opacity = 0;
-      setTimeout(()=> el.remove(), 250);
-    }, 2200);
+    else if(h<.65)bmap[i]=11;
+    else if(h<.79)bmap[i]=12;
+    else if(h<.88)bmap[i]=13;
+    else bmap[i]=14;
   }
-
-  function openModal(innerHTML, onClose = () => {}) {
-    $modal().innerHTML = `
-      <div class="fixed inset-0 bg-black/70 flex items-end sm:items-center sm:justify-center z-[999] p-4">
-        <div class="bg-darkCard w-full max-w-md rounded-2xl p-5 border border-darkBorder shadow-card max-h-[90vh] overflow-y-auto">
-          <button onclick="closeModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-darkBgLight flex items-center justify-center hover:bg-darkCardHover">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-          ${innerHTML}
-        </div>
-      </div>
-    `;
-    $modal().firstChild.addEventListener("click", (e)=>{
-      if (e.target === e.currentTarget) closeModal();
-    });
+  const BC=[[10,28,72],[18,50,105],[30,80,138],[45,115,155],[210,195,150],[95,158,48],[38,95,22],[20,75,15],[158,142,62],[184,148,65],[112,127,112],[102,82,52],[120,108,90],[155,145,134],[220,215,215]];
+  offC=document.createElement('canvas');offC.width=MW;offC.height=MH;
+  const oc=offC.getContext('2d'),id=oc.createImageData(MW,MH),dd=id.data;
+  for(let i=0;i<MW*MH;i++){
+    const b=bmap[i],h=hmap[i];
+    let[r,g,bl]=BC[b]||BC[5];
+    if(b>=4){const sh=Math.max(.78,Math.min(1.25,1+h*.38));r=Math.min(255,r*sh)|0;g=Math.min(255,g*sh)|0;bl=Math.min(255,bl*sh)|0;}
+    if(b<=1){const dp=Math.max(.65,1+h*.28);r=(r*dp)|0;g=(g*dp)|0;bl=(bl*dp)|0;}
+    if(i%MW>0){const sh=Math.max(-20,Math.min(20,(h-hmap[i-1])*115))|0;r=Math.max(0,Math.min(255,r+sh));g=Math.max(0,Math.min(255,g+sh));bl=Math.max(0,Math.min(255,bl+sh));}
+    const vr=((i*2654435761)>>>0)%9-4;
+    dd[i*4]=Math.max(0,Math.min(255,r+vr));dd[i*4+1]=Math.max(0,Math.min(255,g+vr));
+    dd[i*4+2]=Math.max(0,Math.min(255,bl+vr));dd[i*4+3]=255;
   }
+  oc.putImageData(id,0,0);
+  const vg=oc.createRadialGradient(MW/2,MH/2,MW*.18,MW/2,MH/2,MW*.72);
+  vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.25)');
+  oc.fillStyle=vg;oc.fillRect(0,0,MW,MH);
+}
 
-  function closeModal(){ $modal().innerHTML = ""; }
-
-  /*********************
-   * API Helpers
-   *********************/
-  async function apiRequest(endpoint, method = 'GET', body = null) {
-    const options = {
-      method,
-      headers: { 'Content-Type': 'application/json' }
-    };
-    if (body) options.body = JSON.stringify(body);
-    const res = await fetch(`${API}${endpoint}`, options);
-    if (!res.ok) throw new Error(`API error: ${res.status}`);
-    return res.json();
+// ═══════════════════════════════════════════════════
+// NODES
+// ═══════════════════════════════════════════════════
+function placeNodes(seed){
+  const r=rng(seed*137);nodes=[];
+  const land=[];const mg=30;
+  for(let i=0;i<MW*MH;i++){
+    const x=i%MW,y=(i/MW)|0;
+    if(hmap[i]>0.15&&x>mg&&x<MW-mg&&y>mg&&y<MH-mg)land.push(i);
   }
-
-  async function fetchUser(tg_id) {
-    try {
-      return await apiRequest(`/user/${tg_id}`);
-    } catch {
-      return null;
-    }
+  let att=0;
+  const fc=1+P.enemies; // player + enemies
+  while(nodes.length<P.nodes&&att<9000){
+    att++;
+    const pi=land[(r()*land.length)|0];
+    const x=pi%MW,y=(pi/MW)|0;
+    let tc=false;for(const n of nodes)if(Math.hypot(n.x-x,n.y-y)<P.minDist){tc=true;break;}
+    if(tc)continue;
+    const idx=nodes.length;
+    const faction=idx<fc?idx:4;
+    nodes.push({id:idx,x,y,points:idx<fc?60:(12+r()*18),faction,type:r()>.72?'FORTRESS':'CITY',attackTarget:null,supportTarget:null,growthRate:r()*.04+.03});
   }
+}
 
-  async function registerUser(tgUser) {
-    return await apiRequest('/register', 'POST', {
-      tg_id: tgUser.id,
-      username: tgUser.username || 'DinoUser',
-      name: `${tgUser.first_name} ${tgUser.last_name || ''}`,
-      avatar: tgUser.photo_url || "https://i.pravatar.cc/150?img=10"
-    });
+function isPlayer(n){return n.faction===0;}
+function fc(n){return FCOL[n.faction];}
+
+// ═══════════════════════════════════════════════════
+// VORONOI
+// ═══════════════════════════════════════════════════
+function buildVoronoi(){
+  pixelOwner=new Int16Array(MW*MH).fill(-1);
+  for(let i=0;i<MW*MH;i++){
+    if(hmap[i]<LAND_MIN_H)continue;
+    const x=i%MW,y=(i/MW)|0;
+    let md=1e9,near=-1;
+    for(let n=0;n<nodes.length;n++){const d=Math.hypot(x-nodes[n].x,y-nodes[n].y);if(d<md){md=d;near=n;}}
+    pixelOwner[i]=near;
   }
+  terrC=document.createElement('canvas');terrC.width=MW;terrC.height=MH;
+  terrCtx=terrC.getContext('2d');terrBuf=terrCtx.createImageData(MW,MH);
+}
 
-  async function updateUserField(field, value) {
-    await apiRequest('/update-user-field', 'POST', { user_id: state.currentUserId, field, value });
+function updateTerritory(){
+  const d=terrBuf.data;
+  for(let i=0;i<MW*MH;i++){
+    const oi=pixelOwner[i];
+    if(oi===-1){d[i*4+3]=0;continue;}
+    const c=fc(nodes[oi]);
+    const x=i%MW,y=(i/MW)|0;
+    const edge=(x>0&&x<MW-1&&y>0&&y<MH-1)&&(pixelOwner[i+1]!==oi||pixelOwner[i-1]!==oi||pixelOwner[i+MW]!==oi||pixelOwner[i-MW]!==oi);
+    if(edge){d[i*4]=Math.min(255,c[0]+80);d[i*4+1]=Math.min(255,c[1]+80);d[i*4+2]=Math.min(255,c[2]+80);d[i*4+3]=240;}
+    else{d[i*4]=c[0];d[i*4+1]=c[1];d[i*4+2]=c[2];d[i*4+3]=62;}
   }
+  terrCtx.putImageData(terrBuf,0,0);
+}
 
-  async function fetchAllData() {
-    const [users, companies, cryptos, posts, messages, portfolios, leaderboard] = await Promise.all([
-      apiRequest('/users'),
-      apiRequest('/companies'),
-      apiRequest('/cryptos'),
-      apiRequest('/posts'),
-      apiRequest(`/messages/${state.currentUserId}`),
-      apiRequest(`/portfolios/${state.currentUserId}`),
-      apiRequest('/leaderboard')
-    ]);
+// ═══════════════════════════════════════════════════
+// WAR
+// ═══════════════════════════════════════════════════
+function processWar(){
+  const ctrl=new Int32Array(5);
+  nodes.forEach(node=>{
+    node.points+=node.growthRate;if(node.points>200)node.points=200;
 
-    state.users = users;
-    state.companies = companies;
-    state.cryptos = cryptos;
-    state.dinonet.posts = posts;
-    state.messages = messages;
-
-    // Build wallet from portfolios
-    state.wallet.stocks = {};
-    state.wallet.crypto = {};
-    portfolios.forEach(p => {
-      if (p.asset_type === 'company') {
-        state.wallet.stocks[p.asset_id] = { shares: p.amount, avgPrice: p.avg_price, currency: 'DINO' };
-      } else if (p.asset_type === 'crypto') {
-        const crypto = state.cryptos.find(c => c.id === p.asset_id);
-        state.wallet.crypto[p.asset_id] = { amount: p.amount, avgPrice: p.avg_price, currency: crypto ? crypto.currency : 'DINO' };
-      }
-    });
-
-    // Refresh user
-    state.user = await fetchUser(state.tgId);
-
-    // Calc dps
-    state.user.dps = calculateDps();
-  }
-
-  async function syncUser() {
-    await updateUserField('balance', state.user.balance);
-    await updateUserField('dps', state.user.dps);
-    await updateUserField('xp', state.user.xp);
-    await updateUserField('level', state.user.level);
-    await updateUserField('xp_next', state.user.xp_next);
-    await updateUserField('clicks', state.user.clicks);
-    await updateUserField('per_click', state.user.per_click);
-    await updateUserField('click_upgrade_cost', state.user.click_upgrade_cost);
-    // Add other fields as needed
-  }
-
-  /*********************
-   * Random Modals
-   *********************/
-  function showInviteModal() {
-    if (localStorage.getItem('noInvite')) return;
-    const refLink = `https://t.me/YOUR_GAME_BOT?start=ref-game-${state.currentUserId}`;
-    openModal(`
-      <div class="space-y-4">
-        <h2 class="text-xl font-bold">Пригласи друга!</h2>
-        <p>Получи ${fmt(ECON.REF_REWARD)} DINO за каждого приглашенного.</p>
-        <div class="flex items-center justify-between bg-darkBgLight rounded-xl p-3">
-          <div class="text-sm truncate">${refLink}</div>
-          <button class="px-3 py-1.5 rounded-lg bg-darkPrimary/20 text-sm" onclick="copyText('${refLink}')">
-            <i class="fa-regular fa-copy mr-1"></i>Копировать
-          </button>
-        </div>
-        <button class="w-full py-3 rounded-xl bg-darkBgLight" onclick="closeModal()">Закрыть</button>
-        <button class="w-full py-3 rounded-xl bg-darkDanger text-white" onclick="localStorage.setItem('noInvite', true); closeModal();">Больше не показывать</button>
-      </div>
-    `);
-  }
-
-  function showSubscribeModal() {
-    if (localStorage.getItem('noSubscribe')) return;
-    openModal(`
-      <div class="space-y-4">
-        <h2 class="text-xl font-bold">Подпишись на канал!</h2>
-        <p>Будь в курсе всех событий.</p>
-        <a href="YOUR_CHANNEL_LINK" class="block py-3 rounded-xl bg-darkPrimary text-white text-center">Подписаться</a>
-        <button class="w-full py-3 rounded-xl bg-darkBgLight" onclick="closeModal()">Закрыть</button>
-        <button class="w-full py-3 rounded-xl bg-darkDanger text-white" onclick="localStorage.setItem('noSubscribe', true); closeModal();">Больше не показывать</button>
-      </div>
-    `);
-  }
-
-  function showNoSellWarn() {
-    if (localStorage.getItem('noSellWarn')) return;
-    openModal(`
-      <div class="space-y-4">
-        <h2 class="text-xl font-bold">Внимание!</h2>
-        <p>Покупка за TON или STARS дает ежесекундный доход, но продать нельзя.</p>
-        <button class="w-full py-3 rounded-xl bg-darkBgLight" onclick="closeModal()">Закрыть</button>
-        <button class="w-full py-3 rounded-xl bg-darkDanger text-white" onclick="localStorage.setItem('noSellWarn', true); closeModal();">Больше не показывать</button>
-      </div>
-    `);
-  }
-
-  /*********************
-   * Theme Toggle
-   *********************/
-  async function toggleTheme() {
-    state.theme = state.theme === "dark" ? "light" : "dark";
-    document.body.classList.remove("dark", "light");
-    document.body.classList.add(state.theme);
-    await updateUserField('theme', state.theme);
-    renderIfTab("profile", renderProfile);
-  }
-
-  /*********************
-   * Price Engines
-   *********************/
-  function stockFairPrice(company) {
-    const target = ECON.STOCK_BASE_PRICE + company.clients * ECON.STOCK_PRICE_PER_CLIENT;
-    if (company.last_price == null) return +(target.toFixed(4));
-    return +(company.last_price + (target - company.last_price) * ECON.STOCK_PRICE_SMOOTH).toFixed(4);
-  }
-
-  function cryptoFairPrice(coin) {
-    if (coin.fixed) return coin.price;
-    const base = coin.initial_price || ECON.CRYPTO_DINO_COST_MIN / ECON.CRYPTO_SUPPLY_LIMIT;
-    const target = base + coin.investors * ECON.CRYPTO_PRICE_PER_INVESTOR;
-    if (coin.last_price == null) return +(target.toFixed(4));
-    return +(coin.last_price + (target - coin.last_price) * ECON.CRYPTO_SMOOTH).toFixed(4);
-  }
-
-  function calculateDps() {
-    return Object.entries(state.wallet.crypto).reduce((sum, [id, w]) => {
-      const co = state.cryptos.find(x => x.id === parseInt(id));
-      if (co) sum += w.amount * co.dps_rate;
-      return sum;
-    }, 0);
-  }
-
-  /*********************
-   * Game Loop
-   *********************/
-  function tick() {
-    const dt = Math.max(0, Math.min(1, (now() - state.lastTick)/1000));
-    state.lastTick = now();
-    state.user.dps = calculateDps();
-    state.user.balance += state.user.dps * dt;
-    updateHeader();
-
-    if (state.user.xp >= state.user.xp_next) {
-      state.user.level++;
-      state.user.xp -= state.user.xp_next;
-      state.user.xp_next = Math.round(state.user.xp_next * 1.5);
-      toast(`Уровень повышен! Теперь вы ${state.user.level} уровня`);
-      updateLevel();
+    // поддержка
+    if(node.supportTarget!==null){
+      const t=nodes[node.supportTarget];
+      if(t.faction!==node.faction||node.points<15){node.supportTarget=null;}
+      else{const s=Math.min(0.5,node.points-10);if(s>0){node.points-=s;t.points=Math.min(200,t.points+s);}}
     }
 
-    if (now() - state.lastInvestUpdate > 60000) {
-      recalcPrices();
-      renderIfTab("investments", renderInvestments);
-      state.lastInvestUpdate = now();
-    }
-    requestAnimationFrame(tick);
-  }
-
-  setInterval(syncUser, 5000); // Sync every 5s
-
-  function updateHeader() {
-    $balance().textContent = fmt(state.user.balance);
-    $stars().textContent = fmt(state.user.stars);
-    $ton().textContent = fmt(state.user.ton);
-    $dps().textContent = fmt(state.user.dps);
-    if (isMobile()) {
-      $mobileUsername().textContent = state.user.username;
-      $mobileAvatar().src = state.user.avatar;
-    }
-  }
-
-  function updateLevel() {
-    $level().textContent = state.user.level;
-    $xpText().textContent = `${Math.floor(state.user.xp)}/${state.user.xp_next}`;
-    if ($xpBar()) $xpBar().style.width = `${(state.user.xp / state.user.xp_next) * 100}%`;
-  }
-
-  /*********************
-   * Navigation
-   *********************/
-  async function setTab(tab) {
-    state.currentTab = tab;
-
-    document.querySelectorAll(".desktop-nav-btn").forEach(b => {
-      b.classList.remove("bg-darkPrimary", "text-white");
-      b.classList.add("text-darkMuted", "hover:bg-darkCardHover");
-    });
-    const desktopBtn = document.querySelector(`.desktop-nav-btn[data-tab='${tab}']`);
-    if (desktopBtn) {
-      desktopBtn.classList.remove("text-darkMuted", "hover:bg-darkCardHover");
-      desktopBtn.classList.add("bg-darkPrimary", "text-white");
-    }
-
-    document.querySelectorAll(".nav-btn").forEach(b => {
-      b.classList.remove("active", "bg-darkCardHover");
-    });
-    const mobileBtn = document.querySelector(`.nav-btn[data-tab='${tab}']`);
-    if (mobileBtn) {
-      mobileBtn.classList.add("active", "bg-darkCardHover");
-    }
-
-    await fetchAllData(); // Refresh data on tab change
-
-    if (tab === "clicker") renderClicker();
-    if (tab === "dinonet") renderDinoNet();
-    if (tab === "business") renderBusiness();
-    if (tab === "investments") renderInvestments();
-    if (tab === "profile") renderProfile();
-  }
-
-  function renderIfTab(tab, fn){ if (state.currentTab === tab) fn(); }
-
-  /*********************
-   * Clicker
-   *********************/
-  function renderClicker() {
-    $content().innerHTML = `
-      <section class="space-y-6">
-        <div class="card p-5">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <div class="text-sm text-darkMuted">Доход за клик</div>
-              <div class="text-xl font-bold text-darkPrimary">${fmt(state.user.per_click)} DINO</div>
-            </div>
-            <button class="px-4 py-2.5 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium flex items-center" onclick="buyClick()">
-              <i class="fa-solid fa-arrow-up mr-2"></i>+${ECON.CLICK_INC} за ${fmt(state.user.click_upgrade_cost)}
-            </button>
-          </div>
-          <div class="text-xs text-darkMuted">Всего кликов: ${state.user.clicks}</div>
-        </div>
-
-        <div id="click-area" class="card p-8 text-center active:scale-[.995] transition cursor-pointer relative overflow-hidden">
-          <div class="text-8xl mb-2 select-none leading-none animate-float">🦖</div>
-          <div class="text-lg font-medium mb-1">Кликай по динозавру</div>
-          <div class="text-sm text-darkMuted">Зарабатывай DINO и улучшай свою экономику</div>
-        </div>
-      </section>
-    `;
-
-    document.getElementById("click-area").addEventListener("click", async (e) => {
-      const inc = state.user.per_click;
-      state.user.balance += inc;
-      state.user.clicks++;
-      state.user.xp += 0.1;
-      updateHeader();
-      updateLevel();
-
-      const coin = document.createElement("div");
-      coin.className = "coin-pop absolute text-darkSecondary font-medium z-10";
-      coin.style.left = (e.offsetX - 10) + "px";
-      coin.style.top = (e.offsetY - 10) + "px";
-      coin.textContent = `+${inc.toFixed(2)}`;
-      e.currentTarget.appendChild(coin);
-      setTimeout(() => coin.remove(), 600);
-
-      await syncUser();
-    });
-  }
-
-  async function buyClick() {
-    if (state.user.balance < state.user.click_upgrade_cost) return toast("Не хватает DINO", "error");
-    state.user.balance -= state.user.click_upgrade_cost;
-    state.user.per_click += ECON.CLICK_INC;
-    state.user.click_upgrade_cost = Math.ceil(state.user.click_upgrade_cost * ECON.CLICK_COST_MULT);
-    state.user.xp += 10;
-    updateHeader();
-    updateLevel();
-    renderClicker();
-    await syncUser();
-    toast("Улучшение куплено!");
-  }
-
-  /*********************
-   * DinoNet
-   *********************/
-  let dinonetTab = "feed";
-
-  function renderDinoNet() {
-    $content().innerHTML = `
-      <section class="space-y-5">
-        <div class="card p-2">
-          <div class="grid grid-cols-3 gap-2">
-            <button class="tab-btn ${dinonetTab==='feed'?'active':''} rounded-xl py-3 font-medium" onclick="setDinoNetTab('feed')">
-              <i class="fa-solid fa-rss mr-2"></i>Лента
-            </button>
-            <button class="tab-btn ${dinonetTab==='myposts'?'active':''} rounded-xl py-3 font-medium" onclick="setDinoNetTab('myposts')">
-              <i class="fa-solid fa-file-lines mr-2"></i>Мои
-            </button>
-            <button class="tab-btn ${dinonetTab==='leaders'?'active':''} rounded-xl py-3 font-medium" onclick="setDinoNetTab('leaders')">
-              <i class="fa-solid fa-trophy mr-2"></i>Лидеры
-            </button>
-          </div>
-        </div>
-
-        ${dinonetTab==='feed' ? feedPanelHTML() : dinonetTab==='myposts' ? myPostsPanelHTML() : leadersPanelHTML()}
-      </section>
-    `;
-    if (dinonetTab === 'feed') {
-      document.getElementById('add-media-btn').addEventListener('click', () => {
-        document.getElementById('media-upload').click();
-      });
-      document.getElementById('media-upload').addEventListener('change', function(e) {
-        handleMediaPreview(this.files);
-      });
-    }
-  }
-
-  function setDinoNetTab(t){ dinonetTab=t; renderDinoNet(); }
-
-  function feedPanelHTML() {
-    const filteredPosts = state.dinonet.posts;
-    return `
-      <div class="space-y-5">
-        <div class="card p-5">
-          <div class="flex gap-3 mb-4">
-            <img src="${state.user.avatar}" class="w-12 h-12 rounded-full border-2 border-darkPrimary" />
-            <div class="flex-1">
-              <textarea id="post-text" rows="${isMobile() ? 2 : 3}" class="w-full bg-darkBgLight border border-darkBorder rounded-xl p-3 outline-none resize-none text-sm" placeholder="Что нового в мире динозавров?"></textarea>
-              <div id="post-media-preview" class="mt-2 flex flex-wrap gap-2"></div>
-            </div>
-          </div>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4 text-darkMuted">
-              <button id="add-media-btn" class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-darkCardHover">
-                <i class="fa-regular fa-image"></i>
-              </button>
-              <button class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-darkCardHover">
-                <i class="fa-regular fa-face-smile"></i>
-              </button>
-              <input type="file" id="media-upload" accept="image/*" class="hidden" multiple>
-            </div>
-            <button class="px-4 py-2 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium flex items-center" onclick="publishPost()">
-              <i class="fa-solid fa-paper-plane mr-2"></i>Опубликовать
-            </button>
-          </div>
-        </div>
-
-        <div class="space-y-4" id="post-feed">
-          ${filteredPosts.slice().sort((a,b)=>b.created_at-a.created_at).map(p=>postItemHTML(p)).join("") || '<div class="text-center py-10"><i class="fa-regular fa-comment-dots text-4xl text-darkMuted mb-3"></i><p>Постов пока нет</p></div>'}
-        </div>
-      </div>
-    `;
-  }
-
-  function myPostsPanelHTML() {
-    const myPosts = state.dinonet.posts.filter(p => p.author_id === state.currentUserId).sort((a,b)=>b.created_at-a.created_at);
-    return `
-      <div class="space-y-4">
-        ${myPosts.map(p=>postItemHTML(p, true)).join("") || '<div class="text-center py-10"><i class="fa-regular fa-comment-dots text-4xl text-darkMuted mb-3"></i><p>Нет ваших постов</p></div>'}
-      </div>
-    `;
-  }
-
-  function leadersPanelHTML() {
-    const leaders = state.users.sort((a,b) => b.level - a.level).slice(0,10);
-    return `
-      <div class="space-y-4">
-        ${leaders.map(u => {
-          const owned = [...state.companies.filter(c => c.owner_id === u.id).map(c => c.name), ...state.cryptos.filter(co => co.creator_id === u.id).map(co => co.name)].join(", ");
-          return `
-            <div class="card p-5">
-              <div class="flex items-center gap-3 mb-3">
-                <img src="${u.avatar}" class="w-10 h-10 rounded-full" />
-                <div class="flex-1">
-                  <div class="font-semibold">${u.name} (@${u.username})</div>
-                  <div class="text-sm text-darkMuted">Уровень: ${u.level || 1} | DINO: ${fmt(u.balance || 0)}</div>
-                  <div class="text-xs text-darkPrimary">Владелец: ${owned || "Ничего"}</div>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join("") || '<div class="text-center py-10"><i class="fa-solid fa-trophy text-4xl text-darkMuted mb-3"></i><p>Нет лидеров</p></div>'}
-      </div>
-    `;
-  }
-
-  function postItemHTML(p, isMy = false){
-    const dt = new Date(p.created_at).toLocaleString();
-    const author = state.users.find(u => u.id === p.author_id) || state.user;
-    const ownedCompanies = state.companies.filter(c => c.owner_id === p.author_id).map(c => c.name);
-    const ownedCryptos = state.cryptos.filter(co => co.creator_id === p.author_id).map(co => co.name);
-    const ownedText = [...ownedCompanies, ...ownedCryptos].join(", ");
-    const ownedHTML = ownedText ? `<div class="text-xs text-darkPrimary mt-1">Владелец: ${ownedText}</div>` : '';
-    const mediaHTML = p.media && p.media.length > 0 ? `<div class="mt-3 grid grid-cols-2 gap-2">${p.media.map(url => `<img src="${url}" class="rounded-lg border border-darkBorder">`).join('')}</div>` : '';
-    const textClass = isMobile() ? 'post-text' : '';
-    const usernameHTML = author.show_username ? `<span class="text-sm text-darkMuted">@${author.username}</span>` : '';
-    const moreBtn = isMobile() && p.content.length > 100 ? `<button id="more_${p.id}" onclick="togglePostExpand('${p.id}')" class="text-darkPrimary text-sm mt-1">Подробнее</button>` : '';
-
-    return `
-      <article id="post_${p.id}" class="card p-5 fade-in">
-        <div class="flex items-start gap-3 mb-3">
-          <img src="${author.avatar}" class="w-10 h-10 rounded-full" />
-          <div class="flex-1">
-            <div class="flex items-center justify-between mb-1">
-              <div class="font-semibold cursor-pointer" onclick="openProfile('${p.author_id}')">${author.name} ${usernameHTML}</div>
-              <div class="text-xs text-darkMuted">${dt}</div>
-            </div>
-            ${ownedHTML}
-            <div class="mt-2 whitespace-pre-wrap text-sm ${textClass}">${escapeHtml(p.content)}</div>
-            ${moreBtn}
-            ${mediaHTML}
-          </div>
-        </div>
-        <div class="flex items-center gap-4 text-sm border-t border-darkBorder pt-3">
-          <button onclick="likePost('${p.id}')" class="flex items-center text-darkMuted hover:text-darkSecondary">
-            <i class="fa-regular fa-heart mr-1.5"></i>${p.likes}
-          </button>
-          <div class="flex items-center text-darkMuted">
-            <i class="fa-regular fa-eye mr-1.5"></i>${p.views}
-          </div>
-          <button onclick="deletePost('${p.id}')" class="flex items-center text-darkMuted hover:text-red-400 ml-auto ${p.author_id !== state.currentUserId && !isMy ? 'hidden' : ''}">
-            <i class="fa-regular fa-trash-can mr-1.5"></i>Удалить
-          </button>
-        </div>
-      </article>
-    `;
-  }
-
-  function togglePostExpand(id) {
-    const post = document.getElementById(`post_${id}`);
-    post.classList.toggle('post-expanded');
-    const btn = document.getElementById(`more_${id}`);
-    btn.textContent = post.classList.contains('post-expanded') ? 'Свернуть' : 'Подробнее';
-  }
-
-  function escapeHtml(str){ return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
-
-  function handleMediaPreview(files) {
-    const previewContainer = document.getElementById('post-media-preview');
-    previewContainer.innerHTML = '';
-
-    Array.from(files).forEach(file => {
-      if (!file.type.startsWith('image/')) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const img = document.createElement('img');
-        img.src = e.target.result;
-        img.className = 'w-16 h-16 rounded object-cover border border-darkBorder';
-        previewContainer.appendChild(img);
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  async function publishPost(){
-    const ta = document.getElementById("post-text");
-    const text = (ta.value || "").trim();
-    const mediaFiles = document.getElementById('media-upload').files;
-
-    if (!text && mediaFiles.length === 0) return toast("Пустой пост", "error");
-
-    let media = [];
-    if (mediaFiles.length > 0) {
-      media = await Promise.all(Array.from(mediaFiles).map(file => new Promise((resolve) => {
-        if (file.type.startsWith('image/')) {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target.result);
-          reader.readAsDataURL(file);
-        } else {
-          resolve(null);
+    // атака
+    if(node.attackTarget!==null){
+      const t=nodes[node.attackTarget];
+      if(node.points<5||t.faction===node.faction){node.attackTarget=null;return;}
+      for(let j=0;j<70;j++){
+        let rx=(Math.min(node.x,t.x)-10+Math.random()*(Math.abs(node.x-t.x)+20))|0;
+        let ry=(Math.min(node.y,t.y)-10+Math.random()*(Math.abs(node.y-t.y)+20))|0;
+        if(rx<0||rx>=MW||ry<0||ry>=MH)continue;
+        const pi=ry*MW+rx;
+        if(pixelOwner[pi]===t.id){
+          let ok=false;for(const s of[-1,1,-MW,MW])if(pixelOwner[pi+s]===node.id){ok=true;break;}
+          if(ok){pixelOwner[pi]=node.id;const d=t.type==='FORTRESS'?.42:.16;node.points-=d;t.points-=d*.9;}
         }
-      })));
-      media = media.filter(m => m);
-    }
-
-    await apiRequest('/posts', 'POST', { user_id: state.currentUserId, content: text, media });
-    ta.value = "";
-    document.getElementById('media-upload').value = "";
-    document.getElementById('post-media-preview').innerHTML = "";
-    await fetchAllData();
-    renderDinoNet();
-    toast("Пост опубликован!");
-  }
-
-  async function likePost(id){
-    await apiRequest('/like-post', 'POST', { post_id: id });
-    await fetchAllData();
-    renderDinoNet();
-  }
-
-  async function deletePost(id){
-    await apiRequest('/delete-post', 'POST', { post_id: id });
-    await fetchAllData();
-    renderDinoNet();
-    toast("Пост удалён");
-  }
-
-  /*********************
-   * Business
-   *********************/
-  let businessTab = "companies";
-
-  function renderBusiness() {
-    $content().innerHTML = `
-      <section class="space-y-5">
-        <div class="card p-2">
-          <div class="grid grid-cols-3 gap-2">
-            <button class="tab-btn ${businessTab==='companies'?'active':''} rounded-xl py-3 font-medium" onclick="setBusinessTab('companies')">
-              <i class="fa-solid fa-building mr-2"></i>Бизнес
-            </button>
-            <button class="tab-btn ${businessTab==='crypto'?'active':''} rounded-xl py-3 font-medium" onclick="setBusinessTab('crypto')">
-              <i class="fa-solid fa-coins mr-2"></i>Крипта
-            </button>
-            <button class="tab-btn ${businessTab==='referrals'?'active':''} rounded-xl py-3 font-medium" onclick="setBusinessTab('referrals')">
-              <i class="fa-solid fa-link mr-2"></i>Рефералы
-            </button>
-          </div>
-        </div>
-
-        ${businessTab==='companies' ? companiesPanelHTML() : businessTab==='crypto' ? cryptoPanelHTML() : referralsPanelHTML()}
-      </section>
-    `;
-  }
-
-  function setBusinessTab(t){ businessTab=t; renderBusiness(); }
-
-  function companiesPanelHTML(){
-    const my = state.companies.filter(c => c.owner_id === state.currentUserId);
-    return `
-      <div class="space-y-5">
-        <div class="card p-5">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h3 class="font-semibold text-lg mb-1">Создать компанию</h3>
-              <p class="text-sm text-darkMuted">Бесплатно. Имя должно быть уникальным.</p>
-            </div>
-            <button class="px-4 py-2.5 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium flex items-center" onclick="openCreateCompany()">
-              <i class="fa-solid fa-plus mr-2"></i>Создать
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <h3 class="font-semibold text-lg mb-4 flex items-center">
-            <i class="fa-solid fa-building-user mr-2"></i>Мои компании
-          </h3>
-          <div class="space-y-4">
-            ${my.length ? my.map(co => `
-              <div class="card p-5 cursor-pointer" onclick="openCompanyDetails('${co.id}')">
-                <div class="flex items-center mb-2">
-                  ${co.photo ? `<img src="${co.photo}" class="w-8 h-8 rounded-full mr-2">` : ''}
-                  <div class="font-bold text-lg mb-1">${co.name} (${co.ticker})</div>
-                </div>
-                <div class="text-sm text-darkMuted">Клиенты: ${co.clients} | Цена акции: ${fmt(co.last_price || stockFairPrice(co))}</div>
-              </div>
-            `).join("") : '<div class="text-center py-10 card"><i class="fa-regular fa-building text-4xl text-darkMuted mb-3"></i><p>Ещё нет компаний</p></div>'}
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  function openCreateCompany(){
-    openModal(`
-      <div class="space-y-4">
-        <h2 class="text-xl font-bold mb-2">Новая компания</h2>
-        <p class="text-sm text-red-400">Не пишите ничего плохого. Мы не несем ответственности. Мы за традиционные ценности.</p>
-        <div class="space-y-3">
-          <div>
-            <label class="block text-sm font-medium mb-1">Название компании</label>
-            <input id="newco_name" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3" placeholder="Например: DinoSoft">
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Тикер (акроним)</label>
-            <input id="newco_ticker" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3" placeholder="Например: DINO" maxlength="6">
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Фото (загрузка)</label>
-            <input id="newco_photo" type="file" accept="image/*" class="hidden">
-            <button onclick="document.getElementById('newco_photo').click()" class="px-4 py-2 rounded-xl bg-darkPrimary text-white">Загрузить фото</button>
-            <div id="newco_photo_preview" class="mt-2"></div>
-          </div>
-        </div>
-        <button class="w-full py-3 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium mt-2" onclick="createCompany()">
-          Создать компанию
-        </button>
-        <p class="text-xs text-darkMuted mt-3">При создании выпускается 1000 акций, которые сразу попадают в ваш инвестиционный портфель.</p>
-      </div>
-    `);
-
-    document.getElementById('newco_photo').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          document.getElementById('newco_photo_preview').innerHTML = `<img src="${ev.target.result}" class="w-16 h-16 rounded-full">`;
-        };
-        reader.readAsDataURL(file);
       }
-    });
-  }
-
-  async function createCompany(){
-    const name = document.getElementById("newco_name").value.trim();
-    const ticker = document.getElementById("newco_ticker").value.trim().replace(/[^A-Z0-9]/g,"").slice(0,6).toUpperCase();
-    const photoFile = document.getElementById("newco_photo").files[0];
-    let photo = "";
-    if (!name || !ticker) return toast("Заполните имя и тикер", "error");
-
-    if (photoFile) {
-      photo = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.readAsDataURL(photoFile);
-      });
+      if(t.points<=0){t.faction=node.faction;t.points=10;node.attackTarget=null;}
     }
+    ctrl[node.faction]++;
+  });
 
-    await apiRequest('/companies', 'POST', { owner_id: state.currentUserId, name, ticker, photo });
-    closeModal();
-    await fetchAllData();
-    renderBusiness();
-    renderIfTab("investments", renderInvestments);
-    toast("Компания создана!");
+  // stats HUD
+  const total=nodes.length;
+  for(let f=0;f<=P.enemies;f++){const el=document.getElementById('ctrl-'+f);if(el)el.innerText=Math.round(ctrl[f]/total*100)+'%';}
+  const thr=document.getElementById('threat');
+  if(thr){
+    let en=0;for(let f=1;f<=P.enemies;f++)en+=ctrl[f];
+    const ep=en/total;
+    if(ep>.6){thr.innerText='CRIT';thr.style.color='#ff1040';}
+    else if(ep>.4){thr.innerText='HIGH';thr.style.color='#ff6600';}
+    else if(ep>.25){thr.innerText='MID';thr.style.color='#ffbb00';}
+    else{thr.innerText='LOW';thr.style.color='#44ff88';}
   }
 
-  function openCompanyDetails(id) {
-    const c = state.companies.find(x => x.id === parseInt(id));
-    if (!c) return;
-    const avail = c.total_issued - c.sold_shares;
-    const price = c.last_price ?? stockFairPrice(c);
-    const ref = `https://t.me/YOUR_GAME_BOT?start=ref-${c.id}`;
-    const canEmit = c.initial_shares + c.clients*10 - c.total_issued;
-    openModal(`
-      <div class="space-y-4">
-        <h2 class="font-bold text-xl mb-1">${c.name} (${c.ticker})</h2>
-        ${c.photo ? `<img src="${c.photo}" class="w-16 h-16 rounded-full mx-auto">` : ''}
-        <div class="grid grid-cols-2 gap-3 mb-4">
-          <div class="bg-darkBgLight rounded-xl p-3">
-            <div class="text-darkMuted text-sm mb-1">Клиенты</div>
-            <div class="font-semibold text-lg">${c.clients}</div>
-          </div>
-          <div class="bg-darkBgLight rounded-xl p-3">
-            <div class="text-darkMuted text-sm mb-1">Цена акции</div>
-            <div class="font-semibold text-lg text-darkPrimary">${fmt(price)}</div>
-          </div>
-          <div class="bg-darkBgLight rounded-xl p-3">
-            <div class="text-darkMuted text-sm mb-1">Доступно акций</div>
-            <div class="font-semibold text-lg">${avail}</div>
-          </div>
-          <div class="bg-darkBgLight rounded-xl p-3">
-            <div class="text-darkMuted text-sm mb-1">Доход от продаж</div>
-            <div class="font-semibold text-lg">${fmt(c.revenue)}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between bg-darkBgLight rounded-xl p-3 mb-4">
-          <div class="text-sm truncate"><span class="text-darkMuted">Реф. ссылка: </span><span>${ref}</span></div>
-          <button class="px-3 py-1.5 rounded-lg bg-darkPrimary/20 hover:bg-darkPrimary/30 text-sm" onclick="copyText('${ref}')">
-            <i class="fa-regular fa-copy mr-1"></i>Копировать
-          </button>
-        </div>
-        <div class="bg-darkBgLight rounded-xl p-3">
-          <div class="font-semibold mb-2 flex items-center"><i class="fa-solid fa-print mr-2 text-darkSecondary"></i>Эмиссия акций</div>
-          <div class="text-xs text-darkMuted mb-2">Доступно к выпуску: ${canEmit} акций</div>
-          <div class="flex items-center gap-2">
-            <input id="emi_${c.id}" type="number" min="1" class="flex-1 bg-darkCard border border-darkBorder rounded-lg px-3 py-2" placeholder="Количество">
-            <button class="px-3 py-2 rounded-lg bg-darkPrimary hover:bg-darkPrimaryHover text-white" onclick="emitShares('${c.id}')">
-              Выпустить
-            </button>
-          </div>
-          <div class="text-xs text-darkSecondary mt-1">Стоимость: ${ECON.EMISSION_COST_PER_SHARE} DINO/акция</div>
-        </div>
-        <div class="bg-darkBgLight rounded-xl p-3">
-          <div class="font-semibold mb-2 flex items-center"><i class="fa-solid fa-users mr-2 text-darkPrimary"></i>Привлечение клиентов</div>
-          <div class="text-xs text-darkMuted mb-2">Покупайте клиентов для роста цены акций</div>
-          <div class="grid grid-cols-1 gap-2">
-            <button class="px-3 py-2.5 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white flex items-center justify-center" onclick="buyClientDino('${c.id}')">
-              <i class="fa-solid fa-user-plus mr-2"></i>+1 за ${fmt(ECON.CLIENT_COST_DINO)} DINO
-            </button>
-            <button class="px-3 py-2.5 rounded-xl bg-indigo-500/90 hover:bg-indigo-600 text-white flex items-center justify-center" onclick="buyClientStars('${c.id}')">
-              <i class="fa-solid fa-users-rays mr-2"></i>+${ECON.CLIENT_PACK_SIZE} за ${ECON.CLIENT_PACK_COST_STARS} ⭐
-            </button>
-            <button class="px-3 py-2.5 rounded-xl bg-blue-500/90 hover:bg-blue-600 text-white flex items-center justify-center" onclick="buyClientTon('${c.id}')">
-              <i class="fa-solid fa-user-plus mr-2"></i>+1 за ${fmt(ECON.CLIENT_COST_TON)} TON
-            </button>
-          </div>
-        </div>
-        <button class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium mt-4" onclick="confirmDeleteCompany('${c.id}')">
-          Удалить компанию
-        </button>
-      </div>
-    `);
+  if(!gameOver){
+    if(ctrl[0]===total)endGame(true);
+    else if(ctrl[0]===0)endGame(false);
   }
+}
 
-  function confirmDeleteCompany(id, stage=1) {
-    const msg = stage === 1 ? "Вы уверены?" : "Подтвердите ещё раз.";
-    openModal(`
-      <div class="space-y-4">
-        <h2 class="text-xl font-bold">Удаление компании</h2>
-        <p>${msg}</p>
-        <button class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white" onclick="${stage === 1 ? `confirmDeleteCompany('${id}', 2)` : `deleteCompany('${id}')`}">
-          Да, удалить
-        </button>
-        <button class="w-full py-3 rounded-xl bg-darkBgLight" onclick="closeModal()">Отмена</button>
-      </div>
-    `);
-  }
+function endGame(win){
+  gameOver=true;
+  document.getElementById('go-title').innerText=win?'VICTORY':'DEFEAT';
+  document.getElementById('go-title').style.color=win?'#38c8ff':'#ff4466';
+  document.getElementById('go-sub').innerText=win?'ISLAND FULLY CONQUERED':'ISLAND LOST';
+  document.getElementById('gameover').style.display='block';
+  setIntel(win?'CONQUERED':'DEFEATED');
+}
 
-  async function deleteCompany(id) {
-    await apiRequest('/delete-company', 'POST', { company_id: id });
-    closeModal();
-    await fetchAllData();
-    renderBusiness();
-    renderInvestments();
-    toast("Компания удалена");
-  }
-
-  async function emitShares(id){
-    const c = state.companies.find(x=>x.id===parseInt(id)); if (!c) return;
-    const input = document.getElementById("emi_"+id);
-    let n = parseInt(input.value || "0");
-    if (!n || n < 1) return toast("Введите количество", "error");
-    const can = c.initial_shares + c.clients*10 - c.total_issued;
-    n = clamp(n, 0, can);
-    if (n <= 0) return toast("Нет доступной эмиссии", "error");
-    const cost = n * ECON.EMISSION_COST_PER_SHARE;
-    if (state.user.balance < cost) return toast("Не хватает DINO", "error");
-    await apiRequest('/emit-shares', 'POST', { company_id: id, amount: n, cost });
-    await fetchAllData();
-    closeModal();
-    openCompanyDetails(id);
-    renderIfTab("investments", renderInvestments);
-    toast(`Выпущено ${n} акций (-${fmt(cost)} DINO)`);
-  }
-
-  async function buyClientDino(id){
-    const c = state.companies.find(x=>x.id===parseInt(id)); if (!c) return;
-    if (state.user.balance < ECON.CLIENT_COST_DINO) return toast("Не хватает DINO", "error");
-    await apiRequest('/buy-client', 'POST', { company_id: id, type: 'dino', amount: 1, cost: ECON.CLIENT_COST_DINO });
-    await fetchAllData();
-    closeModal();
-    openCompanyDetails(id);
-    renderIfTab("investments", renderInvestments);
-    toast("+1 клиент");
-  }
-
-  async function buyClientStars(id){
-    const c = state.companies.find(x=>x.id===parseInt(id)); if (!c) return;
-    if (state.user.stars < ECON.CLIENT_PACK_COST_STARS) return toast("Не хватает ⭐", "error");
-    await apiRequest('/buy-client', 'POST', { company_id: id, type: 'stars', amount: ECON.CLIENT_PACK_SIZE, cost: ECON.CLIENT_PACK_COST_STARS });
-    await fetchAllData();
-    closeModal();
-    openCompanyDetails(id);
-    renderIfTab("investments", renderInvestments);
-    toast(`+${ECON.CLIENT_PACK_SIZE} клиентов`);
-  }
-
-  async function buyClientTon(id){
-    const c = state.companies.find(x=>x.id===parseInt(id)); if (!c) return;
-    if (state.user.ton < ECON.CLIENT_COST_TON) return toast("Не хватает TON", "error");
-    await apiRequest('/buy-client', 'POST', { company_id: id, type: 'ton', amount: 1, cost: ECON.CLIENT_COST_TON });
-    await fetchAllData();
-    closeModal();
-    openCompanyDetails(id);
-    renderIfTab("investments", renderInvestments);
-    toast("+1 клиент");
-  }
-
-  function cryptoPanelHTML(){
-    const my = state.cryptos.filter(co=>co.creator_id===state.currentUserId);
-    return `
-      <div class="space-y-5">
-        <div class="card p-5">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h3 class="font-semibold text-lg mb-1">Создать криптовалюту</h3>
-              <p class="text-sm text-darkMuted">Выберите способ создания.</p>
-            </div>
-            <button class="px-4 py-2.5 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium flex items-center" onclick="openCreateCrypto()">
-              <i class="fa-solid fa-plus mr-2"></i>Создать
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <h3 class="font-semibold text-lg mb-4 flex items-center">
-            <i class="fa-solid fa-coins mr-2"></i>Мои токены
-          </h3>
-          <div class="space-y-4">
-            ${my.length ? my.map(co => `
-              <div class="card p-5 cursor-pointer" onclick="openCryptoDetails('${co.id}')">
-                <div class="flex items-center mb-2">
-                  ${co.photo ? `<img src="${co.photo}" class="w-8 h-8 rounded-full mr-2">` : ''}
-                  <div class="font-bold text-lg mb-1">${co.name} (${co.ticker})</div>
-                </div>
-                <div class="text-sm text-darkMuted">Инвесторов: ${co.investors} | Цена: ${fmt(co.last_price || cryptoFairPrice(co))}</div>
-              </div>
-            `).join("") : '<div class="text-center py-10 card"><i class="fa-regular fa-coins text-4xl text-darkMuted mb-3"></i><p>Ещё нет токенов</p></div>'}
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  function openCreateCrypto(){
-    openModal(`
-      <div class="space-y-4">
-        <h2 class="text-xl font-bold mb-2">Создание токена</h2>
-        <p class="text-sm text-red-400">Не пишите ничего плохого. Мы не несем ответственности. Мы за традиционные ценности.</p>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-sm font-medium mb-1">Название</label>
-            <input id="coin_name" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3" placeholder="Dino Coin">
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Тикер</label>
-            <input id="coin_ticker" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3" placeholder="DNX" maxlength="6">
-          </div>
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-1">Фото (загрузка)</label>
-          <input id="coin_photo" type="file" accept="image/*" class="hidden">
-          <button onclick="document.getElementById('coin_photo').click()" class="px-4 py-2 rounded-xl bg-darkPrimary text-white">Загрузить фото</button>
-          <div id="coin_photo_preview" class="mt-2"></div>
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-2">Способ создания</label>
-          <div class="grid grid-cols-3 gap-2">
-            <button id="cv_ton" class="crypto-option px-4 py-3 rounded-xl bg-darkBgLight border-2 border-darkPrimary text-darkPrimary font-medium">
-              TON (${ECON.CRYPTO_TON_COST})
-            </button>
-            <button id="cv_stars" class="crypto-option px-4 py-3 rounded-xl bg-darkBgLight border-2 border-indigo-400 text-indigo-300 font-medium">
-              Stars (${ECON.CRYPTO_STARS_COST})
-            </button>
-            <button id="cv_dino" class="crypto-option px-4 py-3 rounded-xl bg-darkBgLight border-2 border-darkSecondary text-darkSecondary font-medium">
-              DINO (мин ${ECON.CRYPTO_DINO_COST_MIN})
-            </button>
-          </div>
-        </div>
-        <div id="invested_input" class="hidden">
-          <label class="block text-sm font-medium mb-1">Вложение</label>
-          <input id="coin_invested" type="number" min="${ECON.CRYPTO_DINO_COST_MIN}" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3" placeholder="Минимум ${ECON.CRYPTO_DINO_COST_MIN}">
-        </div>
-        <button class="w-full py-3 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium mt-2" onclick="createCrypto()">
-          Создать токен
-        </button>
-        <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 mt-3">
-          <div class="flex items-start">
-            <i class="fa-solid fa-triangle-exclamation text-amber-400 mr-2 mt-0.5"></i>
-            <div class="text-xs text-amber-200">Для TON/Stars цена фиксированная, владелец получает 45% от продаж. Для DINO - меняется, весь доход ваш. Выпуск ограничен ${ECON.CRYPTO_SUPPLY_LIMIT}.</div>
-          </div>
-        </div>
-      </div>
-    `);
-
-    let selectedVia = "TON";
-    const buttons = document.querySelectorAll('.crypto-option');
-    const investedInput = document.getElementById("invested_input");
-
-    buttons.forEach(btn => {
-      btn.addEventListener("click", () => {
-        selectedVia = btn.id.replace('cv_', '').toUpperCase();
-        buttons.forEach(b => b.classList.remove('bg-darkPrimary/10', 'bg-indigo-500/10', 'bg-darkSecondary/10'));
-        let bgClass = selectedVia === "TON" ? "bg-darkPrimary/10" : selectedVia === "STARS" ? "bg-indigo-500/10" : "bg-darkSecondary/10";
-        btn.classList.add(bgClass);
-        investedInput.classList.toggle('hidden', selectedVia !== "DINO");
-      });
-    });
-
-    document.getElementById('cv_ton').click();
-
-    document.getElementById('coin_photo').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          document.getElementById('coin_photo_preview').innerHTML = `<img src="${ev.target.result}" class="w-16 h-16 rounded-full">`;
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-  }
-
-  async function createCrypto(){
-    const name = document.getElementById("coin_name").value.trim();
-    const ticker = document.getElementById("coin_ticker").value.trim().toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6);
-    const photoFile = document.getElementById("coin_photo").files[0];
-    let photo = "";
-    let via = ['TON', 'STARS', 'DINO'].find(v => document.getElementById(`cv_${v.toLowerCase()}`).classList.contains('bg-darkPrimary/10') || document.getElementById(`cv_${v.toLowerCase()}`).classList.contains('bg-indigo-500/10') || document.getElementById(`cv_${v.toLowerCase()}`).classList.contains('bg-darkSecondary/10'));
-    let invested, currency, fixed, price, initial_price;
-    if (via === 'TON') {
-      invested = ECON.CRYPTO_TON_COST;
-      if (state.user.ton < invested) return toast("Не хватает TON", "error");
-      currency = "TON";
-      fixed = true;
-      price = ECON.CRYPTO_TON_FIXED_PRICE;
-      initial_price = price;
-    } else if (via === 'STARS') {
-      invested = ECON.CRYPTO_STARS_COST;
-      if (state.user.stars < invested) return toast("Не хватает ⭐", "error");
-      currency = "STARS";
-      fixed = true;
-      price = ECON.CRYPTO_STARS_FIXED_PRICE;
-      initial_price = price;
-    } else {
-      invested = parseFloat(document.getElementById("coin_invested").value || "0");
-      if (invested < ECON.CRYPTO_DINO_COST_MIN) return toast("Минимальное вложение 50", "error");
-      if (state.user.balance < invested) return toast("Не хватает DINO", "error");
-      currency = "DINO";
-      fixed = false;
-      price = invested / ECON.CRYPTO_SUPPLY_LIMIT;
-      initial_price = price;
-    }
-    const dps_rate = price / ECON.CRYPTO_DPS_RATE_DIVISOR;
-
-    if (!name || !ticker) return toast("Заполните название и тикер", "error");
-
-    if (photoFile) {
-      photo = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.readAsDataURL(photoFile);
-      });
-    }
-
-    await apiRequest('/cryptos', 'POST', { creator_id: state.currentUserId, name, ticker, photo, currency, fixed, price, dps_rate, initial_price });
-    await fetchAllData();
-    updateHeader();
-    closeModal();
-    renderBusiness();
-    renderIfTab("investments", renderInvestments);
-    toast("Токен создан!");
-  }
-
-  function openCryptoDetails(id) {
-    const co = state.cryptos.find(x => x.id === parseInt(id));
-    if (!co) return;
-    const price = co.last_price ?? cryptoFairPrice(co);
-    const ref = `https://t.me/YOUR_GAME_BOT?start=ref-coin-${co.id}`;
-    const canEmit = ECON.CRYPTO_SUPPLY_LIMIT - co.total_supply;
-    openModal(`
-      <div class="space-y-4">
-        <h2 class="font-bold text-xl mb-1">${co.name} (${co.ticker})</h2>
-        <p class="text-sm text-darkMuted">Создано через: ${co.currency}</p>
-        ${co.photo ? `<img src="${co.photo}" class="w-16 h-16 rounded-full mx-auto">` : ''}
-        <div class="grid grid-cols-2 gap-3 mb-4">
-          <div class="bg-darkBgLight rounded-xl p-3">
-            <div class="text-darkMuted text-sm mb-1">Цена</div>
-            <div class="font-semibold text-lg text-darkPrimary">${fmt(price)} ${co.currency}</div>
-          </div>
-          <div class="bg-darkBgLight rounded-xl p-3">
-            <div class="text-darkMuted text-sm mb-1">Инвесторов</div>
-            <div class="font-semibold text-lg">${co.investors}</div>
-          </div>
-          <div class="bg-darkBgLight rounded-xl p-3">
-            <div class="text-darkMuted text-sm mb-1">Общий выпуск</div>
-            <div class="font-semibold text-lg">${co.total_supply}</div>
-          </div>
-          <div class="bg-darkBgLight rounded-xl p-3">
-            <div class="text-darkMuted text-sm mb-1">Доступно к выпуску</div>
-            <div class="font-semibold text-lg">${canEmit}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between bg-darkBgLight rounded-xl p-3 mb-4">
-          <div class="text-sm truncate"><span class="text-darkMuted">Реф. ссылка: </span><span>${ref}</span></div>
-          <button class="px-3 py-1.5 rounded-lg bg-darkPrimary/20 hover:bg-darkPrimary/30 text-sm" onclick="copyText('${ref}')">
-            <i class="fa-regular fa-copy mr-1"></i>Копировать
-          </button>
-        </div>
-        <div class="bg-darkBgLight rounded-xl p-3">
-          <div class="font-semibold mb-2 flex items-center"><i class="fa-solid fa-coins mr-2 text-darkSecondary"></i>Эмиссия токенов</div>
-          <div class="text-xs text-darkMuted mb-2">Доступно: ${canEmit}</div>
-          <div class="flex items-center gap-2">
-            <input id="emi_crypto_${co.id}" type="number" min="1" class="flex-1 bg-darkCard border border-darkBorder rounded-lg px-3 py-2" placeholder="Количество">
-            <button class="px-3 py-2 rounded-lg bg-darkPrimary hover:bg-darkPrimaryHover text-white" onclick="emitCrypto('${co.id}')">
-              Выпустить
-            </button>
-          </div>
-          <div class="text-xs text-darkSecondary mt-1">Стоимость: ${ECON.EMISSION_COST_PER_SHARE} DINO/токен</div>
-        </div>
-        <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
-          <div class="flex items-start">
-            <i class="fa-solid fa-triangle-exclamation text-amber-400 mr-2 mt-0.5"></i>
-            <div class="text-xs text-amber-200">Внимание: криптовалютные инвестиции сопряжены с высоким риском.</div>
-          </div>
-        </div>
-        <button class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium mt-4" onclick="confirmDeleteCrypto('${co.id}')">
-          Удалить крипту
-        </button>
-      </div>
-    `);
-  }
-
-  function confirmDeleteCrypto(id, stage=1) {
-    const msg = stage === 1 ? "Вы уверены?" : "Подтвердите ещё раз.";
-    openModal(`
-      <div class="space-y-4">
-        <h2 class="text-xl font-bold">Удаление крипты</h2>
-        <p>${msg}</p>
-        <button class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white" onclick="${stage === 1 ? `confirmDeleteCrypto('${id}', 2)` : `deleteCrypto('${id}')`}">
-          Да, удалить
-        </button>
-        <button class="w-full py-3 rounded-xl bg-darkBgLight" onclick="closeModal()">Отмена</button>
-      </div>
-    `);
-  }
-
-  async function deleteCrypto(id) {
-    await apiRequest('/delete-crypto', 'POST', { crypto_id: id });
-    closeModal();
-    await fetchAllData();
-    renderBusiness();
-    renderInvestments();
-    toast("Крипта удалена");
-  }
-
-  async function emitCrypto(id){
-    const co = state.cryptos.find(x=>x.id===parseInt(id)); if (!co) return;
-    const input = document.getElementById("emi_crypto_"+id);
-    let n = parseFloat(input.value || "0");
-    if (!n || n < 1) return toast("Введите количество", "error");
-    const can = ECON.CRYPTO_SUPPLY_LIMIT - co.total_supply;
-    n = clamp(n, 0, can);
-    if (n <= 0) return toast("Нет доступной эмиссии", "error");
-    const cost = n * ECON.EMISSION_COST_PER_SHARE;
-    if (state.user.balance < cost) return toast("Не хватает DINO", "error");
-    await apiRequest('/emit-crypto', 'POST', { crypto_id: id, amount: n, cost });
-    await fetchAllData();
-    closeModal();
-    openCryptoDetails(id);
-    renderIfTab("investments", renderInvestments);
-    toast(`Выпущено ${n} токенов (-${fmt(cost)} DINO)`);
-  }
-
-  function referralsPanelHTML() {
-    const refLink = `https://t.me/YOUR_GAME_BOT?start=ref-game-${state.currentUserId}`;
-    return `
-      <div class="space-y-5">
-        <div class="card p-5">
-          <h3 class="font-semibold text-lg mb-4">Реферальная система</h3>
-          <p class="text-sm text-darkMuted mb-4">Приглашайте друзей и получайте ${fmt(ECON.REF_REWARD)} DINO за каждого!</p>
-          <div class="flex items-center justify-between bg-darkBgLight rounded-xl p-3 mb-4">
-            <div class="text-sm truncate"><span class="text-darkMuted">Ваша реф. ссылка: </span><span>${refLink}</span></div>
-            <button class="px-3 py-1.5 rounded-lg bg-darkPrimary/20 hover:bg-darkPrimary/30 text-sm" onclick="copyText('${refLink}')">
-              <i class="fa-regular fa-copy mr-1"></i>Копировать
-            </button>
-          </div>
-          <div class="bg-darkBgLight rounded-xl p-3 mb-4">
-            <div class="text-darkMuted text-sm mb-1">Подпишись на наш канал</div>
-            <a href="YOUR_CHANNEL_LINK" class="text-darkPrimary">Чтобы быть в курсе всех событий</a>
-          </div>
-          <div class="bg-darkBgLight rounded-xl p-3">
-            <div class="text-darkMuted text-sm mb-1">Приглашено</div>
-            <div class="font-semibold text-lg">${state.user.referrals}</div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  /*********************
-   * Investments
-   *********************/
-  let invTab = "stocks";
-
-  function renderInvestments(){
-    $content().innerHTML = `
-      <section class="space-y-5">
-        <div class="card p-2">
-          <div class="grid grid-cols-3 gap-2">
-            <button class="tab-btn ${invTab==='stocks'?'active':''} rounded-xl py-3 font-medium" onclick="setInvTab('stocks')">
-              <i class="fa-solid fa-chart-line mr-2"></i>Акции
-            </button>
-            <button class="tab-btn ${invTab==='crypto'?'active':''} rounded-xl py-3 font-medium" onclick="setInvTab('crypto')">
-              <i class="fa-solid fa-coins mr-2"></i>Крипта
-            </button>
-            <button class="tab-btn ${invTab==='wallet'?'active':''} rounded-xl py-3 font-medium" onclick="setInvTab('wallet')">
-              <i class="fa-solid fa-wallet mr-2"></i>Кошелёк
-            </button>
-          </div>
-        </div>
-
-        ${invTab==='stocks' ? stocksMarketHTML() : invTab==='crypto' ? cryptoMarketHTML() : walletHTML()}
-      </section>
-    `;
-    if (invTab === 'stocks' || invTab === 'crypto') {
-      document.getElementById('search-inv').addEventListener('input', (e) => filterInv(e.target.value, invTab));
-    }
-  }
-
-  function setInvTab(t){ invTab=t; renderInvestments(); }
-
-  function filterInv(query, tab) {
-    query = query.toLowerCase();
-    const cards = document.querySelectorAll('.card.p-5');
-    cards.forEach(card => {
-      const title = card.querySelector('.font-bold.text-lg')?.textContent.toLowerCase() || '';
-      card.style.display = title.includes(query) ? '' : 'none';
-    });
-  }
-
-  function stocksMarketHTML(){
-    const filteredCompanies = state.companies;
-    if (!filteredCompanies.length) return `<div class="card p-5 text-center py-10"><i class="fa-regular fa-building text-4xl text-darkMuted mb-3"></i><p>Нет компаний на рынке</p></div>`;
-    return `
-      <div class="space-y-4">
-        <input id="search-inv" type="text" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3" placeholder="Поиск по имени или тикеру">
-        ${filteredCompanies.map(c=>{
-          const price = c.last_price ?? stockFairPrice(c);
-          const avail = c.total_issued - c.sold_shares;
-          const holding = state.wallet.stocks[c.id]?.shares || 0;
-          const isOwn = c.owner_id === state.currentUserId;
-          const ownClass = isOwn ? 'border-darkSecondary border-2' : '';
-          const ownText = isOwn ? '<span class="pill ml-2">Ваш бизнес</span>' : '';
-
-          return `
-            <div class="card p-5 ${ownClass}">
-              <div class="flex items-center justify-between mb-4">
-                <div class="font-semibold">${c.name} (${c.ticker})${ownText}</div>
-                <div class="text-lg font-bold text-darkPrimary">Цена: ${fmt(price)}</div>
-              </div>
-              <div class="grid grid-cols-3 gap-3 mb-4 text-sm">
-                <div class="bg-darkBgLight rounded-xl p-3">
-                  <div class="text-darkMuted mb-1">Клиенты</div>
-                  <div class="font-semibold">${c.clients}</div>
-                </div>
-                <div class="bg-darkBgLight rounded-xl p-3">
-                  <div class="text-darkMuted mb-1">Доступно</div>
-                  <div class="font-semibold">${avail}</div>
-                </div>
-                <div class="bg-darkBgLight rounded-xl p-3">
-                  <div class="text-darkMuted mb-1">Ваши акции</div>
-                  <div class="font-semibold">${holding}</div>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <input id="buy_${c.id}" type="number" min="1" class="flex-1 bg-darkBgLight border border-darkBorder rounded-xl px-3 py-2" placeholder="Количество">
-                <button class="px-4 py-2.5 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white" onclick="buyStock('${c.id}')">
-                  Купить
-                </button>
-                ${holding > 0 ? `
-                <button class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white" onclick="sellStock('${c.id}')">
-                  Продать
-                </button>
-                ` : ''}
-              </div>
-            </div>
-          `;
-        }).join("")}
-      </div>
-    `;
-  }
-
-  async function buyStock(id){
-    const c = state.companies.find(x=>x.id===parseInt(id)); if (!c) return;
-    let qty = parseInt(document.getElementById("buy_"+id).value||"0");
-    if (!qty || qty<1) return toast("Введите количество", "error");
-    const avail = c.total_issued - c.sold_shares;
-    qty = clamp(qty, 1, avail);
-    const price = c.last_price ?? stockFairPrice(c);
-    const cost = qty * price;
-    if (state.user.balance < cost) return toast("Не хватает DINO", "error");
-
-    await apiRequest('/buy', 'POST', { user_id: state.currentUserId, asset_type: 'company', asset_id: id, amount: qty });
-    state.user.xp += qty;
-    updateLevel();
-    await fetchAllData();
-    updateHeader();
-    renderInvestments();
-    renderIfTab("business", renderBusiness);
-    toast(`Куплено ${qty} акций ${c.ticker}`);
-  }
-
-  async function sellStock(id){
-    const c = state.companies.find(x=>x.id===parseInt(id)); if (!c) return;
-    const w = state.wallet.stocks[id];
-    if (!w || w.shares<=0) return;
-    const qty = w.shares;
-    await apiRequest('/sell', 'POST', { user_id: state.currentUserId, asset_type: 'company', asset_id: id, amount: qty });
-    await fetchAllData();
-    updateHeader();
-    renderInvestments();
-    renderIfTab("business", renderBusiness);
-    toast(`Продано ${qty} акций ${c.ticker}`);
-  }
-
-  function cryptoMarketHTML(){
-    const filteredCryptos = state.cryptos;
-    if (!filteredCryptos.length) return `<div class="card p-5 text-center py-10"><i class="fa-regular fa-coins text-4xl text-darkMuted mb-3"></i><p>Нет токенов на рынке</p></div>`;
-    return `
-      <div class="space-y-4">
-        <input id="search-inv" type="text" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3" placeholder="Поиск по имени или тикеру">
-        ${filteredCryptos.map(co=>{
-          const price = co.last_price ?? cryptoFairPrice(co);
-          const holding = state.wallet.crypto[co.id]?.amount || 0;
-          const isOwn = co.creator_id === state.currentUserId;
-          const ownClass = isOwn ? 'border-darkSecondary border-2' : '';
-          const ownText = isOwn ? '<span class="pill ml-2">Ваша крипта</span>' : '';
-          const dpsText = `<div class="text-sm text-darkPrimary mt-2">Доход: ${fmt(co.dps_rate)} DINO/сек за единицу</div>`;
-
-          return `
-            <div class="card p-5 ${ownClass}">
-              <div class="flex items-center justify-between mb-4">
-                <div class="font-semibold">${co.name} (${co.ticker})${ownText}</div>
-                <div class="text-lg font-bold text-darkPrimary">Цена: ${fmt(price)} ${co.currency}</div>
-              </div>
-              <div class="grid grid-cols-3 gap-3 mb-4 text-sm">
-                <div class="bg-darkBgLight rounded-xl p-3">
-                  <div class="text-darkMuted mb-1">Инвесторов</div>
-                  <div class="font-semibold">${co.investors}</div>
-                </div>
-                <div class="bg-darkBgLight rounded-xl p-3">
-                  <div class="text-darkMuted mb-1">Ваши токены</div>
-                  <div class="font-semibold">${fmt(holding, 4)}</div>
-                </div>
-                <div class="bg-darkBgLight rounded-xl p-3">
-                  <div class="text-darkMuted mb-1">Риск</div>
-                  <div class="font-semibold text-darkSecondary">Высокий</div>
-                </div>
-              </div>
-              ${dpsText}
-              <div class="flex items-center gap-2 mt-2">
-                <input id="cbuy_${co.id}" type="number" min="0.0001" step="0.0001" class="flex-1 bg-darkBgLight border border-darkBorder rounded-xl px-3 py-2" placeholder="Количество">
-                <button class="px-4 py-2.5 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white" onclick="buyCrypto('${co.id}')">
-                  Купить
-                </button>
-                ${holding>0 && co.currency === "DINO" ? `
-                <button class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white" onclick="sellCrypto('${co.id}')">
-                  Продать
-                </button>
-                ` : ''}
-              </div>
-              <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 mt-4">
-                <div class="flex items-start">
-                  <i class="fa-solid fa-triangle-exclamation text-amber-400 mr-2 mt-0.5"></i>
-                  <div class="text-xs text-amber-200">Цена может меняться для DINO-крипты. Вы можете потерять средства.</div>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join("")}
-      </div>
-    `;
-  }
-
-  async function buyCrypto(id){
-    const co = state.cryptos.find(x=>x.id===parseInt(id)); if (!co) return;
-    let amount = parseFloat(document.getElementById("cbuy_"+id).value||"0");
-    if (!amount || amount<=0) return toast("Введите количество", "error");
-    const price = co.last_price ?? cryptoFairPrice(co);
-    const cost = amount * price;
-    const currencyField = co.currency.toLowerCase();
-    if (state.user[currencyField] < cost) return toast(`Не хватает ${co.currency}`, "error");
-    if (co.currency !== 'DINO') showNoSellWarn();
-
-    await apiRequest('/buy', 'POST', { user_id: state.currentUserId, asset_type: 'crypto', asset_id: id, amount });
-    state.user.xp += amount;
-    updateLevel();
-    await fetchAllData();
-    updateHeader();
-    renderInvestments();
-    toast("Покупка успешна");
-  }
-
-  async function sellCrypto(id){
-    const co = state.cryptos.find(x=>x.id===parseInt(id)); if (!co) return;
-    const w = state.wallet.crypto[id]; if (!w || w.amount<=0) return;
-    if (co.currency !== "DINO") return toast("Нельзя продавать", "error");
-    await apiRequest('/sell', 'POST', { user_id: state.currentUserId, asset_type: 'crypto', asset_id: id, amount: w.amount });
-    await fetchAllData();
-    updateHeader();
-    renderInvestments();
-    toast("Продано");
-  }
-
-  function walletHTML(){
-    const stockRows = Object.entries(state.wallet.stocks).map(([id,pos])=>{
-      const c = state.companies.find(x=>x.id===parseInt(id));
-      if (!c) return "";
-      const price = c.last_price ?? stockFairPrice(c);
-      const pnl = (price - pos.avgPrice) * pos.shares;
-      const pnlPercent = pos.avgPrice > 0 ? ((price - pos.avgPrice) / pos.avgPrice) * 100 : 0;
-      const sellBtn = pos.currency === "DINO" ? `<button class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white mt-2" onclick="sellStock('${id}')">Продать</button>` : '';
-
-      return `
-        <div class="bg-darkBgLight rounded-xl p-4">
-          <div class="flex items-center justify-between mb-3">
-            <div class="font-semibold">${c.ticker}</div>
-            <div class="text-sm text-darkMuted">${c.name}</div>
-          </div>
-          <div class="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <div class="text-darkMuted">Количество</div>
-              <div class="font-semibold">${pos.shares}</div>
-            </div>
-            <div>
-              <div class="text-darkMuted">Средняя цена</div>
-              <div class="font-semibold">${fmt(pos.avgPrice)}</div>
-            </div>
-            <div>
-              <div class="text-darkMuted">Текущая цена</div>
-              <div class="font-semibold">${fmt(price)}</div>
-            </div>
-            <div>
-              <div class="text-darkMuted">P/L</div>
-              <div class="font-semibold ${pnl>=0?'text-emerald-400':'text-red-400'}">
-                ${fmt(pnl)} (${fmt(pnlPercent)}%)
-              </div>
-            </div>
-          </div>
-          ${sellBtn}
-        </div>
-      `;
-    }).join("");
-
-    const cryptoRows = Object.entries(state.wallet.crypto).map(([id,pos])=>{
-      const co = state.cryptos.find(x=>x.id===parseInt(id));
-      if (!co) return "";
-      const price = co.last_price ?? cryptoFairPrice(co);
-      const pnl = (price - pos.avgPrice) * pos.amount;
-      const pnlPercent = pos.avgPrice > 0 ? ((price - pos.avgPrice) / pos.avgPrice) * 100 : 0;
-      const sellBtn = pos.currency === "DINO" ? `<button class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white mt-2" onclick="sellCrypto('${id}')">Продать</button>` : '';
-
-      return `
-        <div class="bg-darkBgLight rounded-xl p-4 mt-4">
-          <div class="flex items-center justify-between mb-3">
-            <div class="font-semibold">${co.ticker}</div>
-            <div class="text-sm text-darkMuted">${co.name}</div>
-          </div>
-          <div class="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <div class="text-darkMuted">Количество</div>
-              <div class="font-semibold">${fmt(pos.amount, 4)}</div>
-            </div>
-            <div>
-              <div class="text-darkMuted">Средняя цена</div>
-              <div class="font-semibold">${fmt(pos.avgPrice)}</div>
-            </div>
-            <div>
-              <div class="text-darkMuted">Текущая цена</div>
-              <div class="font-semibold">${fmt(price)}</div>
-            </div>
-            <div>
-              <div class="text-darkMuted">P/L</div>
-              <div class="font-semibold ${pnl>=0?'text-emerald-400':'text-red-400'}">
-                ${fmt(pnl)} (${fmt(pnlPercent)}%)
-              </div>
-            </div>
-          </div>
-          ${sellBtn}
-        </div>
-      `;
-    }).join("");
-
-    return `
-      <div class="space-y-5">
-        <div class="card p-5">
-          <h3 class="font-semibold text-lg mb-4">Акции</h3>
-          ${stockRows || "Нет акций в портфеле"}
-        </div>
-
-        <div class="card p-5">
-          <h3 class="font-semibold text-lg mb-4">Криптовалюта</h3>
-          ${cryptoRows || "Нет крипты в портфеле"}
-        </div>
-      </div>
-    `;
-  }
-
-  /*********************
-   * Profile
-   *********************/
-  function renderProfile() {
-    const messagesToMe = state.messages;
-    const messagesHTML = messagesToMe.map(m => {
-      const fromUser = state.users.find(u => u.id === m.from_id);
-      return `
-        <div class="bg-darkBgLight rounded-xl p-3 mb-2">
-          <div class="font-semibold text-sm">${fromUser ? fromUser.name : "Неизвестный"}:</div>
-          <div class="text-sm">${escapeHtml(m.text)}</div>
-        </div>
-      `;
-    }).join("") || "Нет сообщений";
-
-    const ownedCompanies = state.companies.filter(c => c.owner_id === state.currentUserId).map(c => `<div class="flex items-center"><i class="fa-solid fa-building mr-2 text-darkPrimary"></i>${c.name}</div>`).join("");
-    const ownedCryptos = state.cryptos.filter(co => co.creator_id === state.currentUserId).map(co => `<div class="flex items-center"><i class="fa-solid fa-coins mr-2 text-darkPrimary"></i>${co.name}</div>`).join("");
-    const ownedHTML = [ownedCompanies, ownedCryptos].filter(t => t).join("") || "Ничего";
-
-    $content().innerHTML = `
-      <section class="space-y-6">
-        <div class="card p-5">
-          <div class="flex items-center gap-4 mb-4">
-            <img src="${state.user.avatar}" class="w-16 h-16 rounded-full border-2 border-darkPrimary">
-            <div>
-              <h2 class="font-bold text-xl">${state.user.name}</h2>
-              <p class="text-sm text-darkMuted">@${state.user.username}</p>
-            </div>
-          </div>
-          <p class="text-sm mb-4">${state.user.bio}</p>
-          ${state.user.telegram_channel ? `<p class="text-sm text-darkPrimary">Telegram: ${state.user.telegram_channel}</p>` : ''}
-          <button class="w-full py-3 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium" onclick="openEditProfile()">
-            Редактировать профиль
-          </button>
-        </div>
-
-        <div class="card p-5">
-          <h3 class="font-semibold mb-4">Владелец</h3>
-          <div class="space-y-2 text-sm">${ownedHTML}</div>
-        </div>
-
-        <div class="card p-5">
-          <h3 class="font-semibold mb-4">Настройки</h3>
-          <div class="space-y-4">
-            <div class="flex items-center justify-between">
-              <span>Тема</span>
-              <button class="px-4 py-2 rounded-xl bg-darkBgLight border border-darkBorder flex items-center" onclick="toggleTheme()">
-                <i class="fa-solid fa-${state.theme === 'dark' ? 'moon' : 'sun'} mr-2"></i>${state.theme === 'dark' ? 'Тёмная' : 'Светлая'}
-              </button>
-            </div>
-            <div class="flex items-center justify-between">
-              <span>Показывать username в ДиноНет</span>
-              <button class="px-4 py-2 rounded-xl bg-darkBgLight border border-darkBorder" onclick="toggleShowUsername()">
-                ${state.user.show_username ? 'Да' : 'Нет'}
-              </button>
-            </div>
-            <div class="flex items-center justify-between">
-              <span>Уровень</span>
-              <span class="font-bold">${state.user.level}</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span>XP</span>
-              <span class="font-bold">${fmt(state.user.xp)} / ${state.user.xp_next}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="card p-5">
-          <h3 class="font-semibold mb-4">Сообщения</h3>
-          <div class="space-y-2">${messagesHTML}</div>
-        </div>
-      </section>
-    `;
-  }
-
-  async function toggleShowUsername() {
-    state.user.show_username = !state.user.show_username;
-    await updateUserField('show_username', state.user.show_username);
-    renderProfile();
-  }
-
-  function openEditProfile(){
-    openModal(`
-      <div class="space-y-4">
-        <h2 class="text-xl font-bold mb-2">Редактировать профиль</h2>
-        <div class="space-y-3">
-          <div>
-            <label class="block text-sm font-medium mb-1">Имя</label>
-            <input id="edit_name" value="${state.user.name}" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3">
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Био</label>
-            <textarea id="edit_bio" rows="3" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3">${state.user.bio}</textarea>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Telegram канал</label>
-            <input id="edit_tg" value="${state.user.telegram_channel}" class="w-full bg-darkBgLight border border-darkBorder rounded-xl px-4 py-3" placeholder="@channel">
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Аватар</label>
-            <input id="edit_avatar" type="file" accept="image/*" class="hidden">
-            <button onclick="document.getElementById('edit_avatar').click()" class="px-4 py-2 rounded-xl bg-darkPrimary text-white">Загрузить аватар</button>
-            <div id="edit_avatar_preview" class="mt-2"><img src="${state.user.avatar}" class="w-16 h-16 rounded-full"></div>
-          </div>
-        </div>
-        <button class="w-full py-3 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium mt-2" onclick="saveProfile()">
-          Сохранить
-        </button>
-      </div>
-    `);
-
-    document.getElementById('edit_avatar').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          document.getElementById('edit_avatar_preview').innerHTML = `<img src="${ev.target.result}" class="w-16 h-16 rounded-full">`;
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-  }
-
-  async function saveProfile(){
-    let avatar = state.user.avatar;
-    const photoFile = document.getElementById("edit_avatar").files[0];
-    if (photoFile) {
-      avatar = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.readAsDataURL(photoFile);
-      });
-    }
-    const name = document.getElementById("edit_name").value.trim();
-    const bio = document.getElementById("edit_bio").value.trim();
-    const telegram_channel = document.getElementById("edit_tg").value.trim();
-    await apiRequest('/update-profile', 'POST', { user_id: state.currentUserId, name, bio, telegram_channel, avatar });
-    await fetchAllData();
-    closeModal();
-    renderProfile();
-    updateHeader();
-    toast("Профиль обновлён");
-  }
-
-  function openProfile(userId) {
-    const user = state.users.find(u => u.id === parseInt(userId));
-    if (!user) return;
-    const ownedCompanies = state.companies.filter(c => c.owner_id === userId).map(c => c.name).join(", ");
-    const ownedCryptos = state.cryptos.filter(co => co.creator_id === userId).map(co => co.name).join(", ");
-    const ownedText = [ownedCompanies, ownedCryptos].filter(t => t).join(", ") || "Ничего";
-    const telegramHTML = user.telegram_channel ? `<p class="text-sm text-darkPrimary">Telegram: ${user.telegram_channel}</p>` : '';
-    const usernameHTML = user.show_username ? `@${user.username}` : '';
-
-    openModal(`
-      <div class="space-y-4">
-        <div class="flex items-center gap-4 mb-4">
-          <img src="${user.avatar}" class="w-16 h-16 rounded-full border-2 border-darkPrimary">
-          <div>
-            <h2 class="font-bold text-xl">${user.name}</h2>
-            <p class="text-sm text-darkMuted">${usernameHTML}</p>
-          </div>
-        </div>
-        <p class="text-sm mb-4">${user.bio}</p>
-        ${telegramHTML}
-        <div class="text-sm text-darkPrimary mt-2">Владелец: ${ownedText}</div>
-        <button class="w-full py-3 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium" onclick="openSendMessage('${userId}')">
-          Написать сообщение
-        </button>
-      </div>
-    `);
-  }
-
-  function openSendMessage(toId) {
-    openModal(`
-      <div class="space-y-4">
-        <h2 class="text-xl font-bold mb-2">Отправить сообщение</h2>
-        <textarea id="message-text" rows="4" class="w-full bg-darkBgLight border border-darkBorder rounded-xl p-3 outline-none resize-none" placeholder="Ваше сообщение..."></textarea>
-        <button class="w-full py-3 rounded-xl bg-darkPrimary hover:bg-darkPrimaryHover text-white font-medium" onclick="sendMessage('${toId}')">
-          Отправить
-        </button>
-      </div>
-    `);
-  }
-
-  async function sendMessage(toId) {
-    const text = document.getElementById("message-text").value.trim();
-    if (!text) return toast("Пустое сообщение", "error");
-    await apiRequest('/messages', 'POST', { from_id: state.currentUserId, to_id: parseInt(toId), text });
-    closeModal();
-    await fetchAllData();
-    toast("Сообщение отправлено");
-  }
-
-  /*********************
-   * Init
-   *********************/
-  async function init() {
-    if (window.Telegram && Telegram.WebApp) {
-      const tgUser = Telegram.WebApp.initDataUnsafe.user;
-      if (tgUser) {
-        state.tgId = tgUser.id;
-        let user = await fetchUser(state.tgId);
-        if (!user) {
-          user = await registerUser(tgUser);
+// ═══════════════════════════════════════════════════
+// AI
+// ═══════════════════════════════════════════════════
+let aiInt=null;
+function startAI(){
+  if(aiInt)clearInterval(aiInt);
+  aiInt=setInterval(()=>{
+    for(let f=1;f<=P.enemies;f++){
+      const mine=nodes.filter(n=>n.faction===f);
+      mine.forEach(from=>{
+        if(from.points<28)return;
+        if(Math.random()<.45||from.attackTarget===null){
+          const targets=nodes.filter(n=>n.faction!==f);
+          if(!targets.length)return;
+          targets.sort((a,b)=>Math.hypot(a.x-from.x,a.y-from.y)-Math.hypot(b.x-from.x,b.y-from.y));
+          from.attackTarget=targets[0].id;
         }
-        state.user = user;
-        state.currentUserId = user.id;
-        state.theme = user.theme;
-        document.body.classList.remove("dark", "light");
-        document.body.classList.add(state.theme);
-      } else {
-        toast("Telegram WebApp not available", "error");
-        return;
-      }
-    } else {
-      toast("Telegram WebApp script not loaded", "error");
-      return;
+        if(Math.random()<.22&&from.points>55){
+          const weak=mine.filter(n=>n!==from&&n.points<40);
+          if(weak.length){weak.sort((a,b)=>a.points-b.points);from.supportTarget=weak[0].id;}
+        }
+      });
     }
+  },2800);
+}
 
-    await fetchAllData();
-    document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", (e)=>setTab(e.currentTarget.dataset.tab)));
-    await setTab(state.currentTab);
-    tick();
+// ═══════════════════════════════════════════════════
+// COORDS / HIT
+// ═══════════════════════════════════════════════════
+function toScreen(mx,my){return[mx*vs+vx,my*vs+vy];}
+function toMap(sx,sy){return[(sx-vx)/vs,(sy-vy)/vs];}
+function hitR(){return Math.max(18,22/vs);}
+function nodeAt(sx,sy){const[mx,my]=toMap(sx,sy);const hr=hitR();return nodes.find(n=>Math.hypot(n.x-mx,n.y-my)<hr)||null;}
 
-    // Random modals
-    setInterval(() => {
-      if (Math.random() < 0.05) showInviteModal();
-      if (Math.random() < 0.05) showSubscribeModal();
-    }, 300000); // every 5 min, 5% chance
+// ═══════════════════════════════════════════════════
+// BANNER
+// ═══════════════════════════════════════════════════
+function showBanner(txt,color,bg,ms){
+  const b=document.getElementById('mode-banner');
+  b.innerText=txt;b.style.display='block';b.style.color=color;b.style.background=bg;b.style.borderColor=color;
+  if(ms)setTimeout(()=>b.style.display='none',ms);
+}
+function hideBanner(){document.getElementById('mode-banner').style.display='none';}
+function setIntel(t){document.getElementById('intel').innerText=t;}
+
+// ═══════════════════════════════════════════════════
+// TAP LOGIC
+// ═══════════════════════════════════════════════════
+function handleTap(sx,sy){
+  const node=nodeAt(sx,sy);
+  if(!selectedNode){
+    // первый тап
+    if(node&&isPlayer(node)){
+      selectedNode=node;
+      showBanner('SELECT TARGET  ◆ OWN=SUPPORT  ✕ ENEMY=ATTACK','#ffd250','rgba(30,22,0,0.93)');
+      setIntel('SELECT TARGET');
+    } else {
+      clearSel();
+    }
+    return;
   }
+  // второй тап
+  if(!node){clearSel();return;}
+  if(node.id===selectedNode.id){clearSel();return;}
 
-  function recalcPrices() {
-    state.companies.forEach(c => {
-      c.last_price = stockFairPrice(c);
-    });
-    state.cryptos.forEach(co => {
-      co.last_price = cryptoFairPrice(co);
-    });
+  if(isPlayer(node)){
+    // своя → поддержка
+    selectedNode.supportTarget=node.id;
+    selectedNode.attackTarget=null;
+    showBanner('▲ SUPPORT LINK ACTIVE','#44ff88','rgba(0,22,8,0.93)',1600);
+    setIntel('SUPPORT → #'+node.id);
+  } else {
+    // чужая → атака
+    selectedNode.attackTarget=node.id;
+    selectedNode.supportTarget=null;
+    showBanner('⚔ ATTACK LAUNCHED','#ff4466','rgba(22,0,4,0.93)',1400);
+    setIntel('ATTACK → #'+node.id);
   }
+  clearSel(true); // убрать выделение но оставить баннер
+}
 
-  init();
-  </script>
+function clearSel(keepBanner){
+  selectedNode=null;
+  if(!keepBanner)hideBanner();
+  if(!keepBanner)setIntel('AWAITING ORDERS');
+}
+
+// ═══════════════════════════════════════════════════
+// MOUSE
+// ═══════════════════════════════════════════════════
+canvas.addEventListener('mousedown',e=>{mouseDown=true;mdX=e.clientX;mdY=e.clientY;mVx0=vx;mVy0=vy;mouseMoved=false;});
+window.addEventListener('mousemove',e=>{
+  if(mouseDown){const dx=e.clientX-mdX,dy=e.clientY-mdY;if(!mouseMoved&&Math.hypot(dx,dy)>THRESH)mouseMoved=true;if(mouseMoved){vx=mVx0+dx;vy=mVy0+dy;clamp();}return;}
+  const r=canvas.getBoundingClientRect();hoveredNode=nodeAt(e.clientX-r.left,e.clientY-r.top);
+});
+window.addEventListener('mouseup',e=>{
+  if(!mouseDown)return;mouseDown=false;
+  if(!mouseMoved){const r=canvas.getBoundingClientRect();handleTap(e.clientX-r.left,e.clientY-r.top);}
+  mouseMoved=false;
+});
+canvas.addEventListener('contextmenu',e=>{e.preventDefault();clearSel();});
+
+// ═══════════════════════════════════════════════════
+// TOUCH
+// ═══════════════════════════════════════════════════
+canvas.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  for(const t of e.changedTouches)pointers[t.identifier]={x:t.clientX,y:t.clientY};
+  const pts=Object.values(pointers);touchMoved=false;
+  if(pts.length===1){isDragging=true;dragStartX=pts[0].x;dragStartY=pts[0].y;vx0=vx;vy0=vy;}
+  else if(pts.length===2){
+    isDragging=false;
+    pinchDist0=Math.hypot(pts[1].x-pts[0].x,pts[1].y-pts[0].y);pinchVs0=vs;
+    const r=canvas.getBoundingClientRect();
+    pinchMx=(pts[0].x+pts[1].x)/2-r.left;pinchMy=(pts[0].y+pts[1].y)/2-r.top;
+    pinchVx0=vx;pinchVy0=vy;
+  }
+},{passive:false});
+
+canvas.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  for(const t of e.changedTouches)if(pointers[t.identifier])pointers[t.identifier]={x:t.clientX,y:t.clientY};
+  const pts=Object.values(pointers);
+  if(pts.length===1&&isDragging){
+    const dx=pts[0].x-dragStartX,dy=pts[0].y-dragStartY;
+    if(Math.hypot(dx,dy)>THRESH)touchMoved=true;
+    vx=vx0+dx;vy=vy0+dy;clamp();
+  } else if(pts.length===2){
+    touchMoved=true;
+    const dist=Math.hypot(pts[1].x-pts[0].x,pts[1].y-pts[0].y);
+    const nv=Math.max(.3,Math.min(12,pinchVs0*dist/pinchDist0));
+    const mx0=(pinchMx-pinchVx0)/pinchVs0,my0=(pinchMy-pinchVy0)/pinchVs0;
+    vs=nv;vx=pinchMx-mx0*vs;vy=pinchMy-my0*vs;clamp();
+  }
+},{passive:false});
+
+canvas.addEventListener('touchend',e=>{
+  e.preventDefault();
+  const r=canvas.getBoundingClientRect();
+  for(const t of e.changedTouches){
+    if(!touchMoved&&Object.keys(pointers).length===1)handleTap(t.clientX-r.left,t.clientY-r.top);
+    delete pointers[t.identifier];
+  }
+  if(!Object.keys(pointers).length)isDragging=false;
+},{passive:false});
+canvas.addEventListener('touchcancel',e=>{for(const t of e.changedTouches)delete pointers[t.identifier];isDragging=false;},{passive:false});
+
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+  const mx0=(mx-vx)/vs,my0=(my-vy)/vs;
+  vs=Math.max(.3,Math.min(12,vs*(e.deltaY>0?.88:1.13)));
+  vx=mx-mx0*vs;vy=my-my0*vs;clamp();
+},{passive:false});
+
+function clamp(){
+  vx=Math.max(canvas.width*.15-MW*vs,Math.min(canvas.width*.85,vx));
+  vy=Math.max(canvas.height*.15-MH*vs,Math.min(canvas.height*.85,vy));
+}
+
+// ═══════════════════════════════════════════════════
+// HUD BUILD
+// ═══════════════════════════════════════════════════
+const COL_NAMES=['YOUR','ENEMY','ENEMY 2','ENEMY 3'];
+const COL_HEX=['#38c8ff','#ff4466','#ff9900','#cc44ff'];
+function buildHUD(){
+  const row=document.getElementById('stats-row');row.innerHTML='';
+  for(let f=0;f<=P.enemies;f++){
+    const d=document.createElement('div');d.className='panel';
+    d.innerHTML=`<span class="label">${COL_NAMES[f]}</span><span class="val" id="ctrl-${f}" style="color:${COL_HEX[f]}">0%</span>`;
+    row.appendChild(d);
+  }
+  const th=document.createElement('div');th.className='panel';
+  th.innerHTML=`<span class="label">Threat</span><span class="val" id="threat" style="color:#44ff88">LOW</span>`;
+  row.appendChild(th);
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════
+function draw(){
+  time+=0.02;frameCount++;
+  ctx.fillStyle='#06080f';ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.save();ctx.translate(vx,vy);ctx.scale(vs,vs);ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(offC,0,0);
+
+  // grid
+  ctx.strokeStyle='rgba(255,210,80,0.038)';ctx.lineWidth=.5/vs;
+  for(let i=0;i<MW;i+=40){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,MH);ctx.stroke();}
+  for(let i=0;i<MH;i+=40){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(MW,i);ctx.stroke();}
+
+  if(frameCount%2===0)updateTerritory();
+  ctx.drawImage(terrC,0,0);
+
+  // lines
+  nodes.forEach(n=>{
+    if(n.attackTarget!==null){
+      const t=nodes[n.attackTarget],c=fc(n);
+      ctx.beginPath();ctx.lineWidth=2/vs;ctx.setLineDash([5/vs,2.5/vs]);ctx.lineDashOffset=-time*12;
+      ctx.strokeStyle=`rgba(${c[0]},${c[1]},${c[2]},0.75)`;ctx.moveTo(n.x,n.y);ctx.lineTo(t.x,t.y);ctx.stroke();ctx.setLineDash([]);
+      const ang=Math.atan2(t.y-n.y,t.x-n.x);
+      ctx.save();ctx.translate(t.x-Math.cos(ang)*(16/vs),t.y-Math.sin(ang)*(16/vs));ctx.rotate(ang);
+      ctx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},.9)`;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-9/vs,-4.5/vs);ctx.lineTo(-9/vs,4.5/vs);ctx.fill();ctx.restore();
+    }
+    if(n.supportTarget!==null){
+      const t=nodes[n.supportTarget],pulse=.5+.5*Math.sin(time*8);
+      ctx.beginPath();ctx.lineWidth=1.8/vs;ctx.setLineDash([3/vs,3/vs]);ctx.lineDashOffset=time*8;
+      ctx.strokeStyle=`rgba(80,255,160,${.5+pulse*.3})`;ctx.moveTo(n.x,n.y);ctx.lineTo(t.x,t.y);ctx.stroke();ctx.setLineDash([]);
+      ctx.beginPath();ctx.arc(t.x,t.y,(4+pulse*3)/vs,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(80,255,160,${.6+pulse*.4})`;ctx.lineWidth=1.2/vs;ctx.stroke();
+    }
+  });
+  ctx.restore();
+
+  // nodes screen-space
+  nodes.forEach(n=>{
+    const[sx,sy]=toScreen(n.x,n.y);const c=fc(n);
+    const isSel=selectedNode===n,isHov=hoveredNode===n;
+    const sz=isSel?11:isHov?10:8;
+    ctx.save();
+    ctx.shadowBlur=isSel?30:isHov?18:10;ctx.shadowColor=`rgb(${c[0]},${c[1]},${c[2]})`;
+    ctx.fillStyle=isSel?'#fff':`rgb(${c[0]},${c[1]},${c[2]})`;
+    const rx=Math.round(sx),ry=Math.round(sy);
+    if(n.type==='FORTRESS'){ctx.save();ctx.translate(rx,ry);ctx.rotate(Math.PI/4);ctx.fillRect(-sz,-sz,sz*2,sz*2);ctx.restore();}
+    else{ctx.beginPath();ctx.arc(rx,ry,sz,0,Math.PI*2);ctx.fill();}
+    ctx.shadowBlur=0;
+    ctx.strokeStyle=`rgba(${Math.min(255,c[0]+90)},${Math.min(255,c[1]+90)},${Math.min(255,c[2]+90)},.85)`;ctx.lineWidth=isSel?2.2:1.5;
+    if(n.type==='FORTRESS'){ctx.save();ctx.translate(rx,ry);ctx.rotate(Math.PI/4);ctx.strokeRect(-sz,-sz,sz*2,sz*2);ctx.restore();}
+    else{ctx.beginPath();ctx.arc(rx,ry,sz,0,Math.PI*2);ctx.stroke();}
+    // points
+    ctx.font='bold 12px "Courier New",monospace';ctx.textAlign='center';ctx.textBaseline='bottom';
+    ctx.strokeStyle='rgba(0,0,0,.9)';ctx.lineWidth=3.5;ctx.lineJoin='round';
+    ctx.strokeText(Math.floor(n.points),rx,ry-sz-5);ctx.fillStyle='#fff';ctx.fillText(Math.floor(n.points),rx,ry-sz-5);
+    // label
+    ctx.font='bold 9px "Courier New",monospace';ctx.textBaseline='top';
+    const lbl=n.type==='FORTRESS'?'◆FORT':'●CITY';
+    ctx.strokeStyle='rgba(0,0,0,.85)';ctx.lineWidth=2.5;ctx.strokeText(lbl,rx,ry+sz+4);
+    ctx.fillStyle=`rgb(${Math.min(255,c[0]+60)},${Math.min(255,c[1]+60)},${Math.min(255,c[2]+60)})`;ctx.fillText(lbl,rx,ry+sz+4);
+    // support icon
+    if(n.supportTarget!==null){
+      ctx.font='bold 10px "Courier New",monospace';ctx.textBaseline='middle';
+      ctx.fillStyle='rgba(80,255,160,.9)';ctx.fillText('▲',rx+sz+9,ry);
+    }
+    // selection ring
+    if(isSel){
+      ctx.strokeStyle='rgba(255,255,200,.85)';ctx.lineWidth=2;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.arc(rx,ry,sz+7+Math.sin(time*5)*2,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+    }
+    ctx.restore();
+  });
+
+  processWar();
+  requestAnimationFrame(draw);
+}
+
+// ═══════════════════════════════════════════════════
+// NEW GAME
+// ═══════════════════════════════════════════════════
+let pidx=0;
+function newGame(){
+  const prev=pidx;while(pidx===prev)pidx=Math.floor(Math.random()*PRESETS.length);
+  P=PRESETS[pidx];MW=P.mw;MH=P.mh;
+  gameOver=false;selectedNode=null;hoveredNode=null;frameCount=0;
+  pointers={};isDragging=false;touchMoved=false;
+  hideBanner();
+  document.getElementById('gameover').style.display='none';
+  document.getElementById('status').innerText=P.name;
+  setIntel('GENERATING...');
+  const seed=Date.now()%999983+Math.random()*1000|0;
+  generateIsland(seed);placeNodes(seed);buildVoronoi();updateTerritory();buildHUD();startAI();
+  vs=Math.min(canvas.width/MW,canvas.height/MH)*.88;
+  vx=(canvas.width-MW*vs)/2;vy=(canvas.height-MH*vs)/2;
+  setIntel('AWAITING ORDERS');
+}
+
+function resize(){
+  canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+  vs=Math.min(canvas.width/MW,canvas.height/MH)*.88;
+  vx=(canvas.width-MW*vs)/2;vy=(canvas.height-MH*vs)/2;
+}
+
+window.addEventListener('resize',resize);
+document.getElementById('newgame').addEventListener('click',newGame);
+
+// START
+resize();
+pidx=Math.floor(Math.random()*PRESETS.length);P=PRESETS[pidx];MW=P.mw;MH=P.mh;
+const s0=Date.now()%999983+Math.random()*1000|0;
+generateIsland(s0);placeNodes(s0);buildVoronoi();updateTerritory();buildHUD();startAI();
+document.getElementById('status').innerText=P.name;
+draw();
+
+})();
+</script>
 </body>
 </html>
