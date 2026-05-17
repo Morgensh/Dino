@@ -5,126 +5,218 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Island Conquest</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{width:100%;height:100%;background:#06080f;overflow:hidden;font-family:'Courier New',monospace;touch-action:none;}
-#wrap{position:relative;width:100vw;height:100vh;}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none;}
+
+/* ── MAIN MENU ── */
+#menu{
+  position:fixed;inset:0;z-index:1000;
+  background:#f5f0e8;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;
+}
+
+.menu-bg{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 55%, rgba(180,160,120,0.18) 0%, transparent 70%),
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,0,0,0.03) 39px, rgba(0,0,0,0.03) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,0,0,0.03) 39px, rgba(0,0,0,0.03) 40px);
+}
+
+.menu-ornament{
+  font-size:11px;letter-spacing:6px;text-transform:uppercase;
+  color:rgba(80,60,30,0.35);font-family:'Crimson Text',serif;font-style:italic;
+  margin-bottom:18px;
+}
+
+.menu-title{
+  font-family:'Cinzel',serif;font-weight:900;
+  font-size:clamp(36px,8vw,80px);
+  color:#1a1208;
+  letter-spacing:6px;text-transform:uppercase;
+  line-height:1;margin-bottom:6px;
+  text-shadow: 2px 2px 0 rgba(180,140,60,0.15);
+}
+
+.menu-subtitle{
+  font-family:'Crimson Text',serif;font-style:italic;
+  font-size:clamp(13px,2.2vw,20px);color:rgba(80,60,30,0.6);
+  letter-spacing:3px;margin-bottom:52px;
+}
+
+.menu-divider{
+  width:180px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(140,100,40,0.4),transparent);
+  margin-bottom:52px;
+}
+
+#btn-play{
+  font-family:'Cinzel',serif;font-weight:700;
+  font-size:clamp(13px,2vw,17px);letter-spacing:5px;text-transform:uppercase;
+  color:#f5f0e8;background:#1a1208;
+  border:none;padding:18px 64px;cursor:pointer;
+  position:relative;overflow:hidden;
+  transition:all 0.25s ease;
+}
+#btn-play::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,220,100,0.15),transparent);
+  opacity:0;transition:opacity 0.25s;
+}
+#btn-play:hover{background:#2e2010;transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,0.25);}
+#btn-play:hover::before{opacity:1;}
+#btn-play:active{transform:translateY(0);}
+
+.menu-hint{
+  margin-top:32px;font-family:'Crimson Text',serif;font-style:italic;
+  font-size:12px;color:rgba(80,60,30,0.4);letter-spacing:2px;
+}
+
+/* ── GAME ── */
+#game{display:none;position:fixed;inset:0;}
 #canvas{position:absolute;inset:0;touch-action:none;}
 
-#hud{
-  position:absolute;top:0;left:0;right:0;
-  display:flex;align-items:stretch;
+/* minimal bottom status */
+#bottom-bar{
+  position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
   pointer-events:none;z-index:100;
-  background:rgba(6,8,15,0.93);
-  border-bottom:1px solid rgba(255,210,80,0.18);
-  padding:6px 8px;gap:6px;flex-wrap:wrap;
-}
-.panel{
-  display:flex;flex-direction:column;justify-content:center;
-  padding:3px 8px;border-left:2px solid rgba(255,210,80,0.45);
-}
-.label{font-size:7px;text-transform:uppercase;letter-spacing:1.4px;color:rgba(255,210,80,0.5);margin-bottom:1px;}
-.val{color:#fff;font-weight:bold;font-size:1em;letter-spacing:.8px;}
-.stats{display:flex;gap:4px;flex:1;justify-content:center;flex-wrap:wrap;}
-
-#status-panel{min-width:0;flex:1.2;}
-#status{font-weight:bold;letter-spacing:1px;font-size:.82em;color:#ffd250;}
-#intel{font-size:8px;margin-top:2px;color:rgba(255,255,255,0.6);letter-spacing:.4px;}
-
-#newgame{
-  pointer-events:auto;
-  background:rgba(255,210,80,0.1);
-  border:1px solid rgba(255,210,80,0.32);
-  color:#ffd250;padding:0 12px;
-  font-size:8px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;
-  font-family:'Courier New',monospace;transition:background .15s;
-  white-space:nowrap;min-height:34px;align-self:stretch;border-radius:2px;
-}
-#newgame:active{background:rgba(255,210,80,0.22);}
-
-#footer{
-  position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
-  color:rgba(255,210,80,0.38);font-size:8px;pointer-events:none;
-  text-transform:uppercase;letter-spacing:1.2px;text-align:center;
-  background:rgba(6,8,15,0.8);padding:4px 12px;
-  border:1px solid rgba(255,210,80,0.1);border-radius:18px;white-space:nowrap;
+  font-family:'Cinzel',serif;font-size:10px;letter-spacing:2.5px;
+  color:rgba(255,230,150,0.7);text-align:center;text-transform:uppercase;
+  background:rgba(6,8,15,0.75);padding:6px 18px;
+  border:1px solid rgba(255,210,80,0.12);border-radius:20px;
+  white-space:nowrap;
 }
 
 #mode-banner{
   display:none;
-  position:absolute;bottom:42px;left:50%;transform:translateX(-50%);
-  padding:6px 20px;font-size:10px;letter-spacing:2px;font-weight:bold;
-  border-radius:3px;pointer-events:none;z-index:150;text-transform:uppercase;
-  border:1px solid;white-space:nowrap;
+  position:absolute;bottom:56px;left:50%;transform:translateX(-50%);
+  padding:7px 22px;font-size:10px;letter-spacing:2.5px;font-weight:bold;
+  pointer-events:none;z-index:150;text-transform:uppercase;
+  border:1px solid;white-space:nowrap;font-family:'Cinzel',serif;
 }
 
 #gameover{
   display:none;
   position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-  background:rgba(6,8,15,0.97);border:1px solid rgba(255,210,80,0.4);
-  padding:22px 40px;text-align:center;z-index:300;pointer-events:none;min-width:220px;
+  background:rgba(6,8,15,0.97);border:1px solid rgba(255,210,80,0.35);
+  padding:30px 52px;text-align:center;z-index:300;pointer-events:auto;
 }
-#gameover .go-title{font-size:1.9em;font-weight:bold;letter-spacing:4px;margin-bottom:6px;}
-#gameover .go-sub{font-size:10px;letter-spacing:2px;opacity:.7;color:#fff;}
+#gameover .go-title{font-size:2em;font-weight:bold;letter-spacing:5px;margin-bottom:8px;font-family:'Cinzel',serif;}
+#gameover .go-sub{font-size:10px;letter-spacing:2px;opacity:.6;color:#fff;font-family:'Crimson Text',serif;margin-bottom:22px;}
+#go-restart{
+  font-family:'Cinzel',serif;letter-spacing:3px;font-size:10px;text-transform:uppercase;
+  background:rgba(255,210,80,0.12);border:1px solid rgba(255,210,80,0.35);
+  color:#ffd250;padding:10px 28px;cursor:pointer;pointer-events:auto;
+}
+#go-restart:hover{background:rgba(255,210,80,0.22);}
 
-#wrap::after{
+#pop-btn{
+  position:absolute;top:14px;right:14px;z-index:100;
+  font-family:'Cinzel',serif;font-size:10px;letter-spacing:1.5px;
+  text-transform:uppercase;color:#ffd250;
+  background:rgba(6,8,15,0.82);
+  border:1px solid rgba(255,210,80,0.3);
+  padding:8px 16px;cursor:pointer;border-radius:3px;
+  transition:background .15s;
+}
+#pop-btn:hover{background:rgba(255,210,80,0.15);}
+#pop-btn.active{background:rgba(255,210,80,0.22);border-color:rgba(255,210,80,0.7);}
+
+/* scanlines */
+#game::after{
   content:'';position:absolute;inset:0;pointer-events:none;z-index:200;
-  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.022) 2px,rgba(0,0,0,.022) 4px);
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.018) 2px,rgba(0,0,0,.018) 4px);
 }
 </style>
 </head>
 <body>
-<div id="wrap">
+
+<!-- MAIN MENU -->
+<div id="menu">
+  <div class="menu-bg"></div>
+  <div class="menu-ornament">— Стратегическое завоевание —</div>
+  <div class="menu-title">Island<br>Conquest</div>
+  <div class="menu-subtitle">Захвати землю. Сломи врага.</div>
+  <div class="menu-divider"></div>
+  <button id="btn-play">Играть</button>
+  <div class="menu-hint">Тапни провинцию → тапни цель → завоюй</div>
+</div>
+
+<!-- GAME -->
+<div id="game">
   <canvas id="canvas"></canvas>
-  <div id="hud">
-    <div class="panel" id="status-panel">
-      <div id="status">ISLAND CONQUEST</div>
-      <div id="intel">AWAITING ORDERS</div>
-    </div>
-    <div class="stats" id="stats-row"></div>
-    <button id="newgame">↻ NEW</button>
-  </div>
+  <div id="bottom-bar">ОЖИДАНИЕ ПРИКАЗА</div>
+  <button id="pop-btn">👥 Население</button>
   <div id="mode-banner"></div>
   <div id="gameover">
     <div class="go-title" id="go-title">VICTORY</div>
-    <div class="go-sub" id="go-sub">ISLAND FULLY CONQUERED</div>
+    <div class="go-sub" id="go-sub">Остров полностью завоёван</div>
+    <button id="go-restart">Играть снова</button>
   </div>
-  <div id="footer">TAP OWN→OWN: SUPPORT &nbsp;•&nbsp; TAP OWN→ENEMY: ATTACK &nbsp;•&nbsp; DRAG: PAN &nbsp;•&nbsp; PINCH: ZOOM</div>
 </div>
 
 <script>
 (function(){
 'use strict';
 
+document.getElementById('btn-play').addEventListener('click',()=>{
+  document.getElementById('menu').style.display='none';
+  document.getElementById('game').style.display='block';
+  startGame();
+});
+document.getElementById('pop-btn').addEventListener('click',()=>{
+  popMode=!popMode;
+  document.getElementById('pop-btn').classList.toggle('active',popMode);
+  popDirty=true;
+});
+document.getElementById('go-restart').addEventListener('click',()=>{
+  document.getElementById('gameover').style.display='none';
+  startGame();
+});
+
 // ═══════════════════════════════════════════════════
-// PRESETS
+// CONFIG
 // ═══════════════════════════════════════════════════
 const PRESETS=[
-  {name:'SMALL ISLAND',  mw:480,mh:320,nodes:10,enemies:1,minDist:46,rx:.34,ry:.28},
-  {name:'MEDIUM ISLAND', mw:640,mh:400,nodes:16,enemies:2,minDist:50,rx:.36,ry:.30},
-  {name:'LARGE ISLAND',  mw:820,mh:520,nodes:22,enemies:3,minDist:54,rx:.37,ry:.31},
+  {name:'SMALL',   mw:480,mh:320,nodes:12, enemies:2, minDist:44, rx:.34,ry:.28},
+  {name:'MEDIUM',  mw:640,mh:420,nodes:18, enemies:3, minDist:48, rx:.36,ry:.30},
+  {name:'LARGE',   mw:820,mh:530,nodes:26, enemies:4, minDist:52, rx:.37,ry:.31},
+  {name:'MASSIVE', mw:960,mh:620,nodes:34, enemies:5, minDist:50, rx:.38,ry:.32},
 ];
 
-// Цвета: 0=player(голубой), 1=enemy1(красный), 2=enemy2(оранжевый), 3=enemy3(фиолетовый), 4=neutral(серый)
-const FCOL=[[40,200,255],[255,60,80],[255,140,0],[200,60,255],[155,150,138]];
+// player=0 blue, e1=1 red, e2=2 orange, e3=3 purple, e4=4 teal, e5=5 pink, neutral=6
+const FCOL=[
+  [40,200,255],  // player - blue
+  [255,60,80],   // e1 - red
+  [255,140,0],   // e2 - orange
+  [180,60,255],  // e3 - purple
+  [0,210,160],   // e4 - teal
+  [255,80,180],  // e5 - pink
+  [150,145,135], // neutral
+];
 const LAND_MIN_H=0.065;
+const NEUTRAL_FACTION=6;
 
-let P=PRESETS[1], MW=P.mw, MH=P.mh;
+let P,MW,MH;
 let hmap,bmap,nodes=[],pixelOwner,offC,terrC,terrCtx,terrBuf;
-
 const canvas=document.getElementById('canvas');
 const ctx=canvas.getContext('2d');
 let vx=0,vy=0,vs=1;
 let selectedNode=null,hoveredNode=null;
 let time=0,frameCount=0,gameOver=false;
+let animId=null;
 
-// touch
+// touch/mouse
 let pointers={},isDragging=false,dragStartX=0,dragStartY=0,vx0=0,vy0=0;
 let pinchDist0=0,pinchVs0=1,pinchMx=0,pinchMy=0,pinchVx0=0,pinchVy0=0,touchMoved=false;
 let mouseDown=false,mdX=0,mdY=0,mVx0=0,mVy0=0,mouseMoved=false;
 const THRESH=10;
 
 // ═══════════════════════════════════════════════════
-// SIMPLEX NOISE
+// NOISE
 // ═══════════════════════════════════════════════════
 class SN{
   constructor(s){
@@ -158,9 +250,8 @@ function rng(seed){let s=seed;return()=>{s=(s*9301+49297)%233280;return s/233280
 // ═══════════════════════════════════════════════════
 function generateIsland(seed){
   const n1=new SN(seed*.001),n2=new SN(seed*.002+1337),n3=new SN(seed*.003+2674);
-  hmap=new Float32Array(MW*MH);
+  hmap=new Float32Array(MW*MH);bmap=new Uint8Array(MW*MH);
   const tmap=new Float32Array(MW*MH),mmap=new Float32Array(MW*MH);
-  bmap=new Uint8Array(MW*MH);
   for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){
     const nx=x/MW-.5,ny=y/MH-.5;
     const d=Math.sqrt((nx/P.rx)**2+(ny/P.ry)**2);
@@ -220,26 +311,39 @@ function placeNodes(seed){
     const x=i%MW,y=(i/MW)|0;
     if(hmap[i]>0.15&&x>mg&&x<MW-mg&&y>mg&&y<MH-mg)land.push(i);
   }
+  const factions=1+P.enemies; // player + enemies
   let att=0;
-  const fc=1+P.enemies; // player + enemies
-  while(nodes.length<P.nodes&&att<9000){
+  while(nodes.length<P.nodes&&att<12000){
     att++;
     const pi=land[(r()*land.length)|0];
     const x=pi%MW,y=(pi/MW)|0;
     let tc=false;for(const n of nodes)if(Math.hypot(n.x-x,n.y-y)<P.minDist){tc=true;break;}
     if(tc)continue;
     const idx=nodes.length;
-    const faction=idx<fc?idx:4;
-    nodes.push({id:idx,x,y,points:idx<fc?60:(12+r()*18),faction,type:r()>.72?'FORTRESS':'CITY',attackTarget:null,supportTarget:null,growthRate:r()*.04+.03});
+    const faction=idx<factions?idx:NEUTRAL_FACTION;
+    nodes.push({
+      id:idx,x,y,
+      points:idx<factions?65:(10+r()*20|0),
+      faction,
+      type:r()>.72?'FORTRESS':'CITY',
+      attackTarget:null,
+      supportTarget:null,
+      growthRate:r()*.035+.025,
+      population: Math.round((80000 + r()*920000)/1000)*1000,
+      popGrowth: r()*.0008+.0002
+    });
   }
 }
 
-function isPlayer(n){return n.faction===0;}
-function fc(n){return FCOL[n.faction];}
+// ═══════════════════════════════════════════════════
+// VORONOI + ADJACENCY
+// ═══════════════════════════════════════════════════
+// nodeNeighbors[i] = Set of node ids that share a border with node i
+let nodeNeighbors=[];
+let popMode=false;
+let popC=null,popCtx=null,popBuf=null;
+let popDirty=true;
 
-// ═══════════════════════════════════════════════════
-// VORONOI
-// ═══════════════════════════════════════════════════
 function buildVoronoi(){
   pixelOwner=new Int16Array(MW*MH).fill(-1);
   for(let i=0;i<MW*MH;i++){
@@ -249,8 +353,46 @@ function buildVoronoi(){
     for(let n=0;n<nodes.length;n++){const d=Math.hypot(x-nodes[n].x,y-nodes[n].y);if(d<md){md=d;near=n;}}
     pixelOwner[i]=near;
   }
+  computeAdjacency();
+
   terrC=document.createElement('canvas');terrC.width=MW;terrC.height=MH;
   terrCtx=terrC.getContext('2d');terrBuf=terrCtx.createImageData(MW,MH);
+  // население overlay
+  popC=document.createElement('canvas');popC.width=MW;popC.height=MH;
+  popCtx=popC.getContext('2d');popBuf=popCtx.createImageData(MW,MH);
+  popDirty=true;
+}
+
+function computeAdjacency(){
+  nodeNeighbors=nodes.map(()=>new Set());
+  for(let i=0;i<MW*MH;i++){
+    const o=pixelOwner[i];if(o===-1)continue;
+    const x=i%MW,y=(i/MW)|0;
+    if(x<MW-1){const rr=pixelOwner[i+1];if(rr!==-1&&rr!==o){nodeNeighbors[o].add(rr);nodeNeighbors[rr].add(o);}}
+    if(y<MH-1){const rr=pixelOwner[i+MW];if(rr!==-1&&rr!==o){nodeNeighbors[o].add(rr);nodeNeighbors[rr].add(o);}}
+  }
+}
+
+// Live adjacency: scan bounding box between two nodes for shared border pixels
+function areNeighbors(a,b){
+  const na=nodes[a],nb=nodes[b];
+  if(!na||!nb)return false;
+  const pad=25;
+  const x0=Math.max(1,Math.min(na.x,nb.x)-pad);
+  const x1=Math.min(MW-2,Math.max(na.x,nb.x)+pad);
+  const y0=Math.max(1,Math.min(na.y,nb.y)-pad);
+  const y1=Math.min(MH-2,Math.max(na.y,nb.y)+pad);
+  for(let y=y0;y<=y1;y++){
+    for(let x=x0;x<=x1;x++){
+      const i=y*MW+x;
+      const o=pixelOwner[i];
+      if(o===a){
+        const r1=pixelOwner[i+1],r2=pixelOwner[i-1],r3=pixelOwner[i+MW],r4=pixelOwner[i-MW];
+        if(r1===b||r2===b||r3===b||r4===b)return true;
+      }
+    }
+  }
+  return false;
 }
 
 function updateTerritory(){
@@ -258,113 +400,184 @@ function updateTerritory(){
   for(let i=0;i<MW*MH;i++){
     const oi=pixelOwner[i];
     if(oi===-1){d[i*4+3]=0;continue;}
-    const c=fc(nodes[oi]);
+    const n=nodes[oi];
+    const c=FCOL[n.faction]||FCOL[NEUTRAL_FACTION];
     const x=i%MW,y=(i/MW)|0;
     const edge=(x>0&&x<MW-1&&y>0&&y<MH-1)&&(pixelOwner[i+1]!==oi||pixelOwner[i-1]!==oi||pixelOwner[i+MW]!==oi||pixelOwner[i-MW]!==oi);
-    if(edge){d[i*4]=Math.min(255,c[0]+80);d[i*4+1]=Math.min(255,c[1]+80);d[i*4+2]=Math.min(255,c[2]+80);d[i*4+3]=240;}
-    else{d[i*4]=c[0];d[i*4+1]=c[1];d[i*4+2]=c[2];d[i*4+3]=62;}
+    if(edge){d[i*4]=Math.min(255,c[0]+100);d[i*4+1]=Math.min(255,c[1]+100);d[i*4+2]=Math.min(255,c[2]+100);d[i*4+3]=255;}
+    else{d[i*4]=c[0];d[i*4+1]=c[1];d[i*4+2]=c[2];d[i*4+3]=140;}
   }
   terrCtx.putImageData(terrBuf,0,0);
 }
 
 // ═══════════════════════════════════════════════════
-// WAR
+// COMBAT — Fixed: only adjacent nodes can fight
+// When attacker captures all pixels of target region → target switches faction
 // ═══════════════════════════════════════════════════
 function processWar(){
-  const ctrl=new Int32Array(5);
   nodes.forEach(node=>{
-    node.points+=node.growthRate;if(node.points>200)node.points=200;
+    // рост населения (медленный)
+    node.population=Math.min(5000000, node.population + node.population*node.popGrowth*0.016);
+    // рост войск зависит от населения
+    const popRate = 0.015 + (node.population/1000000)*0.04;
+    node.points += popRate;
+    if(node.points>200)node.points=200;
 
-    // поддержка
+    // support (own faction, adjacent)
     if(node.supportTarget!==null){
       const t=nodes[node.supportTarget];
-      if(t.faction!==node.faction||node.points<15){node.supportTarget=null;}
-      else{const s=Math.min(0.5,node.points-10);if(s>0){node.points-=s;t.points=Math.min(200,t.points+s);}}
+      if(t.faction!==node.faction||node.points<15){
+        node.supportTarget=null;
+      } else {
+        const s=Math.min(0.45,node.points-10);
+        if(s>0){node.points-=s;t.points=Math.min(200,t.points+s);}
+      }
     }
 
-    // атака
+    // attack (must be adjacent)
     if(node.attackTarget!==null){
       const t=nodes[node.attackTarget];
-      if(node.points<5||t.faction===node.faction){node.attackTarget=null;return;}
-      for(let j=0;j<70;j++){
-        let rx=(Math.min(node.x,t.x)-10+Math.random()*(Math.abs(node.x-t.x)+20))|0;
-        let ry=(Math.min(node.y,t.y)-10+Math.random()*(Math.abs(node.y-t.y)+20))|0;
-        if(rx<0||rx>=MW||ry<0||ry>=MH)continue;
+      // cancel if: not enough points, same faction, or no longer adjacent
+      if(node.points<5||t.faction===node.faction||!areNeighbors(node.id,t.id)){
+        node.attackTarget=null;return;
+      }
+
+      // push pixels from target region toward attacker
+      let pixelsMoved=0;
+      const maxTries=120;
+      for(let attempt=0;attempt<maxTries&&pixelsMoved<8;attempt++){
+        // find a border pixel of target that touches attacker
+        const rx=(Math.min(node.x,t.x)-8+Math.random()*(Math.abs(node.x-t.x)+16))|0;
+        const ry=(Math.min(node.y,t.y)-8+Math.random()*(Math.abs(node.y-t.y)+16))|0;
+        if(rx<1||rx>=MW-1||ry<1||ry>=MH-1)continue;
         const pi=ry*MW+rx;
-        if(pixelOwner[pi]===t.id){
-          let ok=false;for(const s of[-1,1,-MW,MW])if(pixelOwner[pi+s]===node.id){ok=true;break;}
-          if(ok){pixelOwner[pi]=node.id;const d=t.type==='FORTRESS'?.42:.16;node.points-=d;t.points-=d*.9;}
+        if(pixelOwner[pi]!==t.id)continue;
+        // check it touches attacker's territory
+        let adj=false;
+        for(const s of[-1,1,-MW,MW]){
+          if(pixelOwner[pi+s]===node.id){adj=true;break;}
+        }
+        if(!adj)continue;
+
+        // transfer pixel
+        pixelOwner[pi]=node.id;
+        pixelsMoved++;
+
+        // cost both sides
+        const cost=t.type==='FORTRESS'?0.55:0.22;
+        node.points-=cost;
+        t.points-=cost*0.85;
+      }
+
+      // Update adjacency for changed pixels (lightweight: just mark dirty)
+      // Check if target has any pixels left
+      let targetPixels=0;
+      // We only count within a bounding box for performance
+      const bx0=Math.max(0,t.x-80),bx1=Math.min(MW-1,t.x+80);
+      const by0=Math.max(0,t.y-80),by1=Math.min(MH-1,t.y+80);
+      for(let py=by0;py<=by1&&targetPixels<5;py++){
+        for(let px=bx0;px<=bx1;px++){
+          if(pixelOwner[py*MW+px]===t.id)targetPixels++;
         }
       }
-      if(t.points<=0){t.faction=node.faction;t.points=10;node.attackTarget=null;}
+
+      // Capture: node is taken when hp ≤ 0 OR no pixels remain
+      if(t.points<=0||targetPixels===0){
+        const oldFaction=t.faction;
+        t.faction=node.faction;
+        t.points=12;
+        node.attackTarget=null;
+        popDirty=true;
+        // cancel stale targets pointing at this node
+        nodes.forEach(n=>{
+          if(n.attackTarget===t.id&&n.faction===t.faction)n.attackTarget=null;
+        });
+      }
     }
-    ctrl[node.faction]++;
   });
 
-  // stats HUD
-  const total=nodes.length;
-  for(let f=0;f<=P.enemies;f++){const el=document.getElementById('ctrl-'+f);if(el)el.innerText=Math.round(ctrl[f]/total*100)+'%';}
-  const thr=document.getElementById('threat');
-  if(thr){
-    let en=0;for(let f=1;f<=P.enemies;f++)en+=ctrl[f];
-    const ep=en/total;
-    if(ep>.6){thr.innerText='CRIT';thr.style.color='#ff1040';}
-    else if(ep>.4){thr.innerText='HIGH';thr.style.color='#ff6600';}
-    else if(ep>.25){thr.innerText='MID';thr.style.color='#ffbb00';}
-    else{thr.innerText='LOW';thr.style.color='#44ff88';}
-  }
-
+  // check win/lose
   if(!gameOver){
-    if(ctrl[0]===total)endGame(true);
-    else if(ctrl[0]===0)endGame(false);
+    const playerNodes=nodes.filter(n=>n.faction===0).length;
+    const enemyNodes=nodes.filter(n=>n.faction!==0&&n.faction!==NEUTRAL_FACTION).length;
+    if(playerNodes===0)endGame(false);
+    else if(enemyNodes===0)endGame(true);
   }
 }
 
 function endGame(win){
   gameOver=true;
-  document.getElementById('go-title').innerText=win?'VICTORY':'DEFEAT';
+  document.getElementById('go-title').innerText=win?'ПОБЕДА':'ПОРАЖЕНИЕ';
   document.getElementById('go-title').style.color=win?'#38c8ff':'#ff4466';
-  document.getElementById('go-sub').innerText=win?'ISLAND FULLY CONQUERED':'ISLAND LOST';
+  document.getElementById('go-sub').innerText=win?'Остров полностью завоёван':'Ваши силы уничтожены';
   document.getElementById('gameover').style.display='block';
-  setIntel(win?'CONQUERED':'DEFEATED');
+  setStatus(win?'ЗАВОЁВАНО':'ПОРАЖЕНИЕ');
 }
 
 // ═══════════════════════════════════════════════════
-// AI
+// AI — smarter: attacks adjacent enemies, supports weakest ally
 // ═══════════════════════════════════════════════════
 let aiInt=null;
+let aiDelayTimer=null;
+
+function aiTick(){
+  for(let f=1;f<=P.enemies;f++){
+    const mine=nodes.filter(n=>n.faction===f);
+    mine.forEach(from=>{
+      if(from.points<40)return;
+
+      const adjEnemies=nodes.filter(n=>
+        n.faction!==f&&areNeighbors(from.id,n.id)
+      );
+
+      if(adjEnemies.length>0&&(Math.random()<.35||from.attackTarget===null)){
+        adjEnemies.sort((a,b)=>a.points-b.points);
+        from.attackTarget=adjEnemies[0].id;
+        from.supportTarget=null;
+      }
+
+      if(Math.random()<.18&&from.points>60){
+        const adjAllies=mine.filter(n=>n!==from&&n.points<28&&areNeighbors(from.id,n.id));
+        if(adjAllies.length){
+          adjAllies.sort((a,b)=>a.points-b.points);
+          from.supportTarget=adjAllies[0].id;
+        }
+      }
+
+      if(from.attackTarget!==null&&!areNeighbors(from.id,from.attackTarget)){
+        from.attackTarget=null;
+      }
+    });
+  }
+}
+
 function startAI(){
+  // сбросить всё
   if(aiInt)clearInterval(aiInt);
-  aiInt=setInterval(()=>{
-    for(let f=1;f<=P.enemies;f++){
-      const mine=nodes.filter(n=>n.faction===f);
-      mine.forEach(from=>{
-        if(from.points<28)return;
-        if(Math.random()<.45||from.attackTarget===null){
-          const targets=nodes.filter(n=>n.faction!==f);
-          if(!targets.length)return;
-          targets.sort((a,b)=>Math.hypot(a.x-from.x,a.y-from.y)-Math.hypot(b.x-from.x,b.y-from.y));
-          from.attackTarget=targets[0].id;
-        }
-        if(Math.random()<.22&&from.points>55){
-          const weak=mine.filter(n=>n!==from&&n.points<40);
-          if(weak.length){weak.sort((a,b)=>a.points-b.points);from.supportTarget=weak[0].id;}
-        }
-      });
-    }
-  },2800);
+  if(aiDelayTimer)clearTimeout(aiDelayTimer);
+  aiInt=null;
+  aiDelayTimer=null;
+  // убедиться что ни одна нода ИИ не имеет целей
+  nodes.forEach(n=>{ if(n.faction!==0){ n.attackTarget=null; n.supportTarget=null; } });
+  // ИИ начинает думать только через 15 секунд
+  aiDelayTimer=setTimeout(()=>{
+    aiInt=setInterval(aiTick, 4500);
+  }, 15000);
 }
 
 // ═══════════════════════════════════════════════════
-// COORDS / HIT
+// COORDS
 // ═══════════════════════════════════════════════════
 function toScreen(mx,my){return[mx*vs+vx,my*vs+vy];}
 function toMap(sx,sy){return[(sx-vx)/vs,(sy-vy)/vs];}
-function hitR(){return Math.max(18,22/vs);}
-function nodeAt(sx,sy){const[mx,my]=toMap(sx,sy);const hr=hitR();return nodes.find(n=>Math.hypot(n.x-mx,n.y-my)<hr)||null;}
+function hitR(){return Math.max(16,20/vs);}
+function nodeAt(sx,sy){
+  const[mx,my]=toMap(sx,sy);const hr=hitR();
+  return nodes.find(n=>Math.hypot(n.x-mx,n.y-my)<hr)||null;
+}
 
 // ═══════════════════════════════════════════════════
-// BANNER
+// BANNER / STATUS
 // ═══════════════════════════════════════════════════
 function showBanner(txt,color,bg,ms){
   const b=document.getElementById('mode-banner');
@@ -372,52 +585,52 @@ function showBanner(txt,color,bg,ms){
   if(ms)setTimeout(()=>b.style.display='none',ms);
 }
 function hideBanner(){document.getElementById('mode-banner').style.display='none';}
-function setIntel(t){document.getElementById('intel').innerText=t;}
+function setStatus(t){document.getElementById('bottom-bar').innerText=t;}
 
 // ═══════════════════════════════════════════════════
-// TAP LOGIC
+// TAP LOGIC — validate adjacency before attack/support
 // ═══════════════════════════════════════════════════
 function handleTap(sx,sy){
   const node=nodeAt(sx,sy);
   if(!selectedNode){
-    // первый тап
-    if(node&&isPlayer(node)){
+    if(node&&node.faction===0){
       selectedNode=node;
-      showBanner('SELECT TARGET  ◆ OWN=SUPPORT  ✕ ENEMY=ATTACK','#ffd250','rgba(30,22,0,0.93)');
-      setIntel('SELECT TARGET');
+      showBanner('ВЫБЕРИ ЦЕЛЬ  ◆ СВОЯ=ПОДДЕРЖКА  ✕ ВРАГ=АТАКА','#ffd250','rgba(22,16,0,0.92)');
+      setStatus('ВЫБЕРИ ЦЕЛЬ');
     } else {
       clearSel();
     }
     return;
   }
-  // второй тап
-  if(!node){clearSel();return;}
-  if(node.id===selectedNode.id){clearSel();return;}
+  if(!node||node.id===selectedNode.id){clearSel();return;}
 
-  if(isPlayer(node)){
-    // своя → поддержка
+  if(node.faction===0){
+    // support — любая своя провинция, без ограничения смежности
     selectedNode.supportTarget=node.id;
     selectedNode.attackTarget=null;
-    showBanner('▲ SUPPORT LINK ACTIVE','#44ff88','rgba(0,22,8,0.93)',1600);
-    setIntel('SUPPORT → #'+node.id);
+    showBanner('▲ ПОДДЕРЖКА АКТИВНА','#44ff88','rgba(0,18,6,0.92)',1500);
+    setStatus('ПОДДЕРЖКА → #'+node.id);
   } else {
-    // чужая → атака
+    // attack — must be adjacent
+    if(!areNeighbors(selectedNode.id,node.id)){
+      showBanner('НЕ ГРАНИЧИТ — АТАКА НЕВОЗМОЖНА','#ff4466','rgba(22,0,4,0.92)',1400);
+      clearSel(true);return;
+    }
     selectedNode.attackTarget=node.id;
     selectedNode.supportTarget=null;
-    showBanner('⚔ ATTACK LAUNCHED','#ff4466','rgba(22,0,4,0.93)',1400);
-    setIntel('ATTACK → #'+node.id);
+    showBanner('⚔ АТАКА НАЧАТА','#ff4466','rgba(22,0,4,0.92)',1400);
+    setStatus('АТАКА → #'+node.id);
   }
-  clearSel(true); // убрать выделение но оставить баннер
+  clearSel(true);
 }
 
 function clearSel(keepBanner){
   selectedNode=null;
-  if(!keepBanner)hideBanner();
-  if(!keepBanner)setIntel('AWAITING ORDERS');
+  if(!keepBanner){hideBanner();setStatus('ОЖИДАНИЕ ПРИКАЗА');}
 }
 
 // ═══════════════════════════════════════════════════
-// MOUSE
+// INPUT
 // ═══════════════════════════════════════════════════
 canvas.addEventListener('mousedown',e=>{mouseDown=true;mdX=e.clientX;mdY=e.clientY;mVx0=vx;mVy0=vy;mouseMoved=false;});
 window.addEventListener('mousemove',e=>{
@@ -430,10 +643,6 @@ window.addEventListener('mouseup',e=>{
   mouseMoved=false;
 });
 canvas.addEventListener('contextmenu',e=>{e.preventDefault();clearSel();});
-
-// ═══════════════════════════════════════════════════
-// TOUCH
-// ═══════════════════════════════════════════════════
 canvas.addEventListener('touchstart',e=>{
   e.preventDefault();
   for(const t of e.changedTouches)pointers[t.identifier]={x:t.clientX,y:t.clientY};
@@ -447,7 +656,6 @@ canvas.addEventListener('touchstart',e=>{
     pinchVx0=vx;pinchVy0=vy;
   }
 },{passive:false});
-
 canvas.addEventListener('touchmove',e=>{
   e.preventDefault();
   for(const t of e.changedTouches)if(pointers[t.identifier])pointers[t.identifier]={x:t.clientX,y:t.clientY};
@@ -459,12 +667,11 @@ canvas.addEventListener('touchmove',e=>{
   } else if(pts.length===2){
     touchMoved=true;
     const dist=Math.hypot(pts[1].x-pts[0].x,pts[1].y-pts[0].y);
-    const nv=Math.max(.3,Math.min(12,pinchVs0*dist/pinchDist0));
+    const minVsP=Math.max(canvas.width/MW,canvas.height/MH);const nv=Math.max(minVsP,Math.min(14,pinchVs0*dist/pinchDist0));
     const mx0=(pinchMx-pinchVx0)/pinchVs0,my0=(pinchMy-pinchVy0)/pinchVs0;
     vs=nv;vx=pinchMx-mx0*vs;vy=pinchMy-my0*vs;clamp();
   }
 },{passive:false});
-
 canvas.addEventListener('touchend',e=>{
   e.preventDefault();
   const r=canvas.getBoundingClientRect();
@@ -475,37 +682,46 @@ canvas.addEventListener('touchend',e=>{
   if(!Object.keys(pointers).length)isDragging=false;
 },{passive:false});
 canvas.addEventListener('touchcancel',e=>{for(const t of e.changedTouches)delete pointers[t.identifier];isDragging=false;},{passive:false});
-
 canvas.addEventListener('wheel',e=>{
   e.preventDefault();
   const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
   const mx0=(mx-vx)/vs,my0=(my-vy)/vs;
-  vs=Math.max(.3,Math.min(12,vs*(e.deltaY>0?.88:1.13)));
+  const minVsW=Math.max(canvas.width/MW,canvas.height/MH);vs=Math.max(minVsW,Math.min(14,vs*(e.deltaY>0?.88:1.13)));
   vx=mx-mx0*vs;vy=my-my0*vs;clamp();
 },{passive:false});
 
 function clamp(){
-  vx=Math.max(canvas.width*.15-MW*vs,Math.min(canvas.width*.85,vx));
-  vy=Math.max(canvas.height*.15-MH*vs,Math.min(canvas.height*.85,vy));
+  // минимальный масштаб: карта всегда закрывает весь экран
+  const minVs=Math.max(canvas.width/MW, canvas.height/MH);
+  if(vs<minVs){ vs=minVs; }
+  // паннинг: никогда не показываем чёрный фон за краями карты
+  vx=Math.min(0, Math.max(canvas.width - MW*vs, vx));
+  vy=Math.min(0, Math.max(canvas.height - MH*vs, vy));
 }
 
-// ═══════════════════════════════════════════════════
-// HUD BUILD
-// ═══════════════════════════════════════════════════
-const COL_NAMES=['YOUR','ENEMY','ENEMY 2','ENEMY 3'];
-const COL_HEX=['#38c8ff','#ff4466','#ff9900','#cc44ff'];
-function buildHUD(){
-  const row=document.getElementById('stats-row');row.innerHTML='';
-  for(let f=0;f<=P.enemies;f++){
-    const d=document.createElement('div');d.className='panel';
-    d.innerHTML=`<span class="label">${COL_NAMES[f]}</span><span class="val" id="ctrl-${f}" style="color:${COL_HEX[f]}">0%</span>`;
-    row.appendChild(d);
+
+function updatePopOverlay(){
+  if(!popDirty)return;
+  popDirty=false;
+  const maxPop=Math.max(...nodes.map(n=>n.population));
+  const d=popBuf.data;
+  for(let i=0;i<MW*MH;i++){
+    const oi=pixelOwner[i];
+    if(oi===-1){d[i*4+3]=0;continue;}
+    const t=nodes[oi].population/maxPop; // 0..1
+    // градиент: холодный синий (малое) → тёплый оранжевый (большое)
+    const r2=Math.min(255,(t*2)*255)|0;
+    const g2=Math.min(255,(t<0.5?t*2:2-t*2)*180)|0;
+    const b2=Math.min(255,((1-t)*220))|0;
+    const x=i%MW,y=(i/MW)|0;
+    const edge=(x>0&&x<MW-1&&y>0&&y<MH-1)&&(pixelOwner[i+1]!==oi||pixelOwner[i-1]!==oi||pixelOwner[i+MW]!==oi||pixelOwner[i-MW]!==oi);
+    d[i*4]=edge?255:r2;
+    d[i*4+1]=edge?255:g2;
+    d[i*4+2]=edge?255:b2;
+    d[i*4+3]=edge?220:150;
   }
-  const th=document.createElement('div');th.className='panel';
-  th.innerHTML=`<span class="label">Threat</span><span class="val" id="threat" style="color:#44ff88">LOW</span>`;
-  row.appendChild(th);
+  popCtx.putImageData(popBuf,0,0);
 }
-
 // ═══════════════════════════════════════════════════
 // RENDER
 // ═══════════════════════════════════════════════════
@@ -516,26 +732,31 @@ function draw(){
   ctx.save();ctx.translate(vx,vy);ctx.scale(vs,vs);ctx.imageSmoothingEnabled=false;
   ctx.drawImage(offC,0,0);
 
-  // grid
-  ctx.strokeStyle='rgba(255,210,80,0.038)';ctx.lineWidth=.5/vs;
+  // subtle grid
+  ctx.strokeStyle='rgba(255,210,80,0.03)';ctx.lineWidth=.5/vs;
   for(let i=0;i<MW;i+=40){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,MH);ctx.stroke();}
   for(let i=0;i<MH;i+=40){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(MW,i);ctx.stroke();}
 
   if(frameCount%2===0)updateTerritory();
   ctx.drawImage(terrC,0,0);
+  if(popMode){updatePopOverlay();ctx.drawImage(popC,0,0);}
 
-  // lines
+  // draw lines
   nodes.forEach(n=>{
     if(n.attackTarget!==null){
-      const t=nodes[n.attackTarget],c=fc(n);
+      const t=nodes[n.attackTarget];
+      if(!areNeighbors(n.id,t.id)){n.attackTarget=null;return;}
+      const c=FCOL[n.faction]||FCOL[NEUTRAL_FACTION];
       ctx.beginPath();ctx.lineWidth=2/vs;ctx.setLineDash([5/vs,2.5/vs]);ctx.lineDashOffset=-time*12;
-      ctx.strokeStyle=`rgba(${c[0]},${c[1]},${c[2]},0.75)`;ctx.moveTo(n.x,n.y);ctx.lineTo(t.x,t.y);ctx.stroke();ctx.setLineDash([]);
+      ctx.strokeStyle=`rgba(${c[0]},${c[1]},${c[2]},0.8)`;ctx.moveTo(n.x,n.y);ctx.lineTo(t.x,t.y);ctx.stroke();ctx.setLineDash([]);
       const ang=Math.atan2(t.y-n.y,t.x-n.x);
-      ctx.save();ctx.translate(t.x-Math.cos(ang)*(16/vs),t.y-Math.sin(ang)*(16/vs));ctx.rotate(ang);
-      ctx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},.9)`;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-9/vs,-4.5/vs);ctx.lineTo(-9/vs,4.5/vs);ctx.fill();ctx.restore();
+      ctx.save();ctx.translate(t.x-Math.cos(ang)*(14/vs),t.y-Math.sin(ang)*(14/vs));ctx.rotate(ang);
+      ctx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},.95)`;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-8/vs,-4/vs);ctx.lineTo(-8/vs,4/vs);ctx.fill();ctx.restore();
     }
     if(n.supportTarget!==null){
-      const t=nodes[n.supportTarget],pulse=.5+.5*Math.sin(time*8);
+      const t=nodes[n.supportTarget];
+      if(!areNeighbors(n.id,t.id)){n.supportTarget=null;return;}
+      const pulse=.5+.5*Math.sin(time*8);
       ctx.beginPath();ctx.lineWidth=1.8/vs;ctx.setLineDash([3/vs,3/vs]);ctx.lineDashOffset=time*8;
       ctx.strokeStyle=`rgba(80,255,160,${.5+pulse*.3})`;ctx.moveTo(n.x,n.y);ctx.lineTo(t.x,t.y);ctx.stroke();ctx.setLineDash([]);
       ctx.beginPath();ctx.arc(t.x,t.y,(4+pulse*3)/vs,0,Math.PI*2);
@@ -544,91 +765,106 @@ function draw(){
   });
   ctx.restore();
 
-  // nodes screen-space
+  // nodes (screen space)
   nodes.forEach(n=>{
-    const[sx,sy]=toScreen(n.x,n.y);const c=fc(n);
+    const[sx,sy]=toScreen(n.x,n.y);
+    const c=FCOL[n.faction]||FCOL[NEUTRAL_FACTION];
     const isSel=selectedNode===n,isHov=hoveredNode===n;
-    const sz=isSel?11:isHov?10:8;
+    const sz=isSel?12:isHov?10:8;
+
+    // highlight adjacent targets when node selected
+    const isAdjToSel=selectedNode&&areNeighbors(selectedNode.id,n.id);
+
     ctx.save();
-    ctx.shadowBlur=isSel?30:isHov?18:10;ctx.shadowColor=`rgb(${c[0]},${c[1]},${c[2]})`;
+    ctx.shadowBlur=isSel?32:isHov?20:isAdjToSel?16:9;
+    ctx.shadowColor=`rgb(${c[0]},${c[1]},${c[2]})`;
     ctx.fillStyle=isSel?'#fff':`rgb(${c[0]},${c[1]},${c[2]})`;
     const rx=Math.round(sx),ry=Math.round(sy);
-    if(n.type==='FORTRESS'){ctx.save();ctx.translate(rx,ry);ctx.rotate(Math.PI/4);ctx.fillRect(-sz,-sz,sz*2,sz*2);ctx.restore();}
-    else{ctx.beginPath();ctx.arc(rx,ry,sz,0,Math.PI*2);ctx.fill();}
+
+    if(n.type==='FORTRESS'){
+      ctx.save();ctx.translate(rx,ry);ctx.rotate(Math.PI/4);
+      ctx.fillRect(-sz,-sz,sz*2,sz*2);ctx.restore();
+    } else {
+      ctx.beginPath();ctx.arc(rx,ry,sz,0,Math.PI*2);ctx.fill();
+    }
     ctx.shadowBlur=0;
-    ctx.strokeStyle=`rgba(${Math.min(255,c[0]+90)},${Math.min(255,c[1]+90)},${Math.min(255,c[2]+90)},.85)`;ctx.lineWidth=isSel?2.2:1.5;
-    if(n.type==='FORTRESS'){ctx.save();ctx.translate(rx,ry);ctx.rotate(Math.PI/4);ctx.strokeRect(-sz,-sz,sz*2,sz*2);ctx.restore();}
-    else{ctx.beginPath();ctx.arc(rx,ry,sz,0,Math.PI*2);ctx.stroke();}
-    // points
+
+    // adjacency highlight ring
+    if(isAdjToSel&&!isSel){
+      ctx.strokeStyle='rgba(255,255,180,0.5)';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(rx,ry,sz+5,0,Math.PI*2);ctx.stroke();
+    }
+
+    ctx.strokeStyle=`rgba(${Math.min(255,c[0]+80)},${Math.min(255,c[1]+80)},${Math.min(255,c[2]+80)},.85)`;ctx.lineWidth=isSel?2.2:1.4;
+    if(n.type==='FORTRESS'){
+      ctx.save();ctx.translate(rx,ry);ctx.rotate(Math.PI/4);ctx.strokeRect(-sz,-sz,sz*2,sz*2);ctx.restore();
+    } else {
+      ctx.beginPath();ctx.arc(rx,ry,sz,0,Math.PI*2);ctx.stroke();
+    }
+
+    // points label
     ctx.font='bold 12px "Courier New",monospace';ctx.textAlign='center';ctx.textBaseline='bottom';
     ctx.strokeStyle='rgba(0,0,0,.9)';ctx.lineWidth=3.5;ctx.lineJoin='round';
-    ctx.strokeText(Math.floor(n.points),rx,ry-sz-5);ctx.fillStyle='#fff';ctx.fillText(Math.floor(n.points),rx,ry-sz-5);
-    // label
-    ctx.font='bold 9px "Courier New",monospace';ctx.textBaseline='top';
-    const lbl=n.type==='FORTRESS'?'◆FORT':'●CITY';
-    ctx.strokeStyle='rgba(0,0,0,.85)';ctx.lineWidth=2.5;ctx.strokeText(lbl,rx,ry+sz+4);
-    ctx.fillStyle=`rgb(${Math.min(255,c[0]+60)},${Math.min(255,c[1]+60)},${Math.min(255,c[2]+60)})`;ctx.fillText(lbl,rx,ry+sz+4);
-    // support icon
-    if(n.supportTarget!==null){
-      ctx.font='bold 10px "Courier New",monospace';ctx.textBaseline='middle';
-      ctx.fillStyle='rgba(80,255,160,.9)';ctx.fillText('▲',rx+sz+9,ry);
-    }
+    const lbl2=popMode?(n.population>=1000000?(n.population/1000000).toFixed(1)+'М':(n.population/1000|0)+'К'):Math.floor(n.points);
+    ctx.strokeText(lbl2,rx,ry-sz-4);ctx.fillStyle='#fff';ctx.fillText(lbl2,rx,ry-sz-4);
+
+    // type label
+    ctx.font='bold 8px "Courier New",monospace';ctx.textBaseline='top';
+    const lbl=n.type==='FORTRESS'?'◆':'●';
+    ctx.strokeStyle='rgba(0,0,0,.85)';ctx.lineWidth=2;ctx.strokeText(lbl,rx,ry+sz+3);
+    ctx.fillStyle=`rgb(${Math.min(255,c[0]+60)},${Math.min(255,c[1]+60)},${Math.min(255,c[2]+60)})`;ctx.fillText(lbl,rx,ry+sz+3);
+
     // selection ring
     if(isSel){
-      ctx.strokeStyle='rgba(255,255,200,.85)';ctx.lineWidth=2;ctx.setLineDash([4,3]);
-      ctx.beginPath();ctx.arc(rx,ry,sz+7+Math.sin(time*5)*2,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+      ctx.strokeStyle='rgba(255,255,200,.9)';ctx.lineWidth=2;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.arc(rx,ry,sz+8+Math.sin(time*5)*2,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
     }
     ctx.restore();
   });
 
   processWar();
-  requestAnimationFrame(draw);
+  animId=requestAnimationFrame(draw);
 }
 
 // ═══════════════════════════════════════════════════
-// NEW GAME
+// START GAME
 // ═══════════════════════════════════════════════════
-let pidx=0;
-function newGame(){
-  const prev=pidx;while(pidx===prev)pidx=Math.floor(Math.random()*PRESETS.length);
-  P=PRESETS[pidx];MW=P.mw;MH=P.mh;
-  gameOver=false;selectedNode=null;hoveredNode=null;frameCount=0;
-  pointers={};isDragging=false;touchMoved=false;
-  hideBanner();
-  document.getElementById('gameover').style.display='none';
-  document.getElementById('status').innerText=P.name;
-  setIntel('GENERATING...');
-  const seed=Date.now()%999983+Math.random()*1000|0;
-  generateIsland(seed);placeNodes(seed);buildVoronoi();updateTerritory();buildHUD();startAI();
-  // Масштабируем карту так, чтобы она полностью заполняла экран без чёрных полей
-vs=Math.max(canvas.width/MW, canvas.height/MH);
+function startGame(){
+  if(animId)cancelAnimationFrame(animId);
+  if(aiInt)clearInterval(aiInt);
+  if(aiDelayTimer)clearTimeout(aiDelayTimer);
+  aiInt=null;aiDelayTimer=null;
 
-// Центрируем карту
-vx=(canvas.width-MW*vs)/2;
-vy=(canvas.height-MH*vs)/2;
-  setIntel('AWAITING ORDERS');
+  gameOver=false;selectedNode=null;hoveredNode=null;frameCount=0;time=0;
+  pointers={};isDragging=false;touchMoved=false;mouseDown=false;
+  hideBanner();setStatus('ОЖИДАНИЕ ПРИКАЗА');
+  popMode=false;
+  if(document.getElementById('pop-btn'))document.getElementById('pop-btn').classList.remove('active');
+
+  // pick random preset
+  P=PRESETS[Math.floor(Math.random()*PRESETS.length)];
+  MW=P.mw;MH=P.mh;
+
+  const seed=Date.now()%999983+Math.random()*1000|0;
+  generateIsland(seed);
+  placeNodes(seed);
+  buildVoronoi();
+  updateTerritory();
+  startAI();
+
+  resize();
+  draw();
 }
 
 function resize(){
   canvas.width=window.innerWidth;canvas.height=window.innerHeight;
-  // Автоматически увеличиваем карту до полного заполнения экрана
-vs=Math.max(canvas.width/MW, canvas.height/MH);
-
-// Центрируем карту
-vx=(canvas.width-MW*vs)/2;
-vy=(canvas.height-MH*vs)/2;
+  const minVsR=Math.max(canvas.width/MW,canvas.height/MH);
+  if(vs<minVsR)vs=minVsR;
+  vx=(canvas.width-MW*vs)/2;
+  vy=(canvas.height-MH*vs)/2;
+  clamp();
 }
-
 window.addEventListener('resize',resize);
-document.getElementById('newgame').addEventListener('click',newGame);
-
-// START
-resize();
-pidx=Math.floor(Math.random()*PRESETS.length);P=PRESETS[pidx];MW=P.mw;MH=P.mh;
-const s0=Date.now()%999983+Math.random()*1000|0;
-generateIsland(s0);placeNodes(s0);buildVoronoi();updateTerritory();buildHUD();startAI();
-document.getElementById('status').innerText=P.name;
-draw();
 
 })();
 </script>
